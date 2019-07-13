@@ -205,6 +205,7 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
                 when (cursor.kind) {
                     CXCursorKind.CXCursor_UnionDecl -> StructDef.Kind.UNION
                     CXCursorKind.CXCursor_StructDecl -> StructDef.Kind.STRUCT
+                    CXCursorKind.CXCursor_ClassDecl -> StructDef.Kind.CLASS
                     else -> error(cursor.kind)
                 }
         )
@@ -214,8 +215,38 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
         structDecl.def = structDef
     }
 
+    /*
+    bool parser::isRecursivelyPublic(CXCursor cursor) {
+        while (clang_isDeclaration(clang_getCursorKind(cursor)) != 0) {
+            auto access = clang_getCXXAccessSpecifier(cursor);
+            if (access == CX_CXXPrivate || access == CX_CXXProtected) {
+                return false;
+            }
+
+            if (clang_getCursorLinkage(cursor) == CXLinkage_Internal) {
+                return false;
+            }
+
+            if (clang_getCursorKind(cursor) == CXCursor_Namespace
+                    && convert(clang_getCursorSpelling(cursor)).empty()) {
+                // Anonymous namespace.
+                return false;
+            }
+
+            cursor = clang_getCursorSemanticParent(cursor);
+        }
+
+        return true;
+    }
+    */
+    private fun isRecursivelyPublic(cursor: CValue<CXCursor>) : Boolean = when (clang_getCXXAccessSpecifier(cursor)) {
+        // FIXME TODO
+        CX_CXXAccessSpecifier.CX_CXXPublic -> true
+        else -> false
+    }
+
     private fun addDeclaredFields(result: MutableList<StructMember>, structType: CValue<CXType>, containerType: CValue<CXType>) {
-        getFields(containerType).forEach { fieldCursor ->
+        getFields(containerType).filter { fieldCursor -> isRecursivelyPublic(fieldCursor) }.forEach { fieldCursor ->
             val name = getCursorSpelling(fieldCursor)
             if (name.isNotEmpty()) {
                 val fieldType = convertCursorType(fieldCursor)
@@ -500,6 +531,8 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
     }
 
     fun convertType(type: CValue<CXType>, typeAttributes: CValue<CXTypeAttributes>? = null): Type {
+        val spelling = clang_getTypeSpelling(type).convertAndDispose()
+        println("$spelling}.${clang_getTypeKindSpelling(type.kind).convertAndDispose()}")
         val primitiveType = convertUnqualifiedPrimitiveType(type)
         if (primitiveType != UnsupportedType) {
             return primitiveType
@@ -753,7 +786,7 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
         }
 
         when (kind) {
-            CXIdxEntity_Struct, CXIdxEntity_Union -> {
+            CXIdxEntity_Struct, CXIdxEntity_Union, CXIdxEntity_CXXClass -> {
                 if (entityName == null) {
                     // Skip anonymous struct.
                     // (It gets included anyway if used as a named field type).
