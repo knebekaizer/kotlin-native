@@ -156,7 +156,7 @@ abstract class StructDecl(val spelling: String) : TypeDeclaration {
 abstract class StructDef(val size: Long, val align: Int, val decl: StructDecl) {
 
     enum class Kind {
-        STRUCT, UNION
+        STRUCT, UNION, CLASS
     }
 
     abstract val members: List<StructMember>
