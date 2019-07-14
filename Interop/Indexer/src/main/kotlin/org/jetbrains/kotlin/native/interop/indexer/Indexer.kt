@@ -532,7 +532,7 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
 
     fun convertType(type: CValue<CXType>, typeAttributes: CValue<CXTypeAttributes>? = null): Type {
         val spelling = clang_getTypeSpelling(type).convertAndDispose()
-        println("$spelling}.${clang_getTypeKindSpelling(type.kind).convertAndDispose()}")
+    //    println("$spelling.${clang_getTypeKindSpelling(type.kind).convertAndDispose()}")
         val primitiveType = convertUnqualifiedPrimitiveType(type)
         if (primitiveType != UnsupportedType) {
             return primitiveType
