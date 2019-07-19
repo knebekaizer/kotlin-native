@@ -159,6 +159,7 @@ abstract class StructDef(val size: Long, val align: Int, val decl: StructDecl) {
         STRUCT, UNION, CLASS
     }
 
+    abstract val methods: List<FunctionDecl>
     abstract val members: List<StructMember>
     abstract val kind: Kind
 
@@ -228,7 +229,8 @@ data class Parameter(val name: String?, val type: Type, val nsConsumed: Boolean)
  * C function declaration.
  */
 class FunctionDecl(val name: String, val parameters: List<Parameter>, val returnType: Type, val binaryName: String,
-                   val isDefined: Boolean, val isVararg: Boolean)
+                   val isDefined: Boolean, val isVararg: Boolean, val isConst: Boolean,
+                   val isCxxInstanceMethod: Boolean)
 
 /**
  * C typedef definition.

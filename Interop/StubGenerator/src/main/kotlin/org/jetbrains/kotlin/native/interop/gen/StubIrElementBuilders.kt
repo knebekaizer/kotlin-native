@@ -65,6 +65,11 @@ internal class StructStubBuilder(
         }
         val classifier = context.getKotlinClassForPointed(decl)
 
+        // TODO fixme
+        var methods: List<FunctionStub> =
+        def.methods.map { func -> (FunctionStubBuilder(context, func).build() as List<FunctionStub>)[0]}
+
+
         val fields: List<PropertyStub?> = def.fields.map { field ->
             try {
                 assert(field.name.isNotEmpty())
@@ -131,7 +136,7 @@ internal class StructStubBuilder(
                 classifier,
                 origin = StubOrigin.Struct(decl),
                 properties = fields.filterNotNull() + if (platform == KotlinPlatform.NATIVE) bitFields else emptyList(),
-                functions = emptyList(),
+                functions = methods, // emptyList(),
                 modality = ClassStubModality.NONE,
                 annotations = listOfNotNull(structAnnotation),
                 superClassInit = superClassInit,
@@ -366,7 +371,8 @@ internal class FunctionStubBuilder(
                 annotations,
                 mustBeExternal,
                 null,
-                MemberStubModality.FINAL
+                MemberStubModality.FINAL,
+                func.isCxxInstanceMethod
         )
         return listOf(functionStub)
     }

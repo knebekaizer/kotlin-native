@@ -389,6 +389,7 @@ class FunctionStub(
         val external: Boolean = false,
         val receiver: ReceiverParameterStub?,
         val modality: MemberStubModality,
+        val isCxxInstanceMethod: Boolean = false,
         val typeParameters: List<TypeParameterStub> = emptyList()
 ) : StubElementWithOrigin, FunctionalStub {
 
