@@ -97,6 +97,8 @@ class SimpleBridgeGeneratorImpl(
             "p${it.index}" to it.value.type.nativeType
         }
 
+     //   cFunctionParameters.add(0, Pair("void* ", "self"))
+
         val joinedCParameters = cFunctionParameters.joinToString { (name, type) -> "$type $name" }
         val cReturnType = returnType.nativeType
 
@@ -148,6 +150,8 @@ class SimpleBridgeGeneratorImpl(
         val nativeBridge = NativeBridge(kotlinLines, nativeLines)
         nativeBridges.add(nativeBacked to nativeBridge)
 
+        nativeLines.forEach { println(it )}
+        kotlinLines.forEach { println(it )}
         return callExpr
     }
 
