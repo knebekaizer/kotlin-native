@@ -264,7 +264,7 @@ class StubIrBridgeBuilder(
                 bridgeArguments,
                 independent = false
         ) { nativeValues ->
-            "${origin.function.name}(${nativeValues.joinToString()})"
+            "${if (function.isCxxInstanceMethod) "((TheStruct*)self)->" else ""}${origin.function.name}(${nativeValues.joinToString()})"
         }
         bodyGenerator.returnResult(result)
         functionBridgeBodies[function] = bodyGenerator.build()

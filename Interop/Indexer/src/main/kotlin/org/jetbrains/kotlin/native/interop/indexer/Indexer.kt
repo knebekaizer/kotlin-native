@@ -32,6 +32,7 @@ private class StructDefImpl(
         size, align, decl
 ) {
     override val members = mutableListOf<StructMember>()
+    override val methods = mutableListOf<FunctionDecl>()
 }
 
 private class EnumDefImpl(spelling: String, type: Type, override val location: Location) : EnumDef(spelling, type) {
@@ -191,6 +192,41 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
         return StructDeclImpl(typeSpelling, getLocation(cursor))
     }
 
+    private fun getMethods(cursor: CValue<CXCursor>) : List<FunctionDecl> {
+        val methods = mutableListOf<FunctionDecl>()
+
+        visitChildren(cursor) { cursor, parent ->
+            /*
+            	if (clang_getCXXAccessSpecifier(cursor) == CX_CXXPublic) {
+                    switch (clang_getCursorKind(cursor)) {
+                        case CXCursor_Constructor:
+                            clazz->ctors.push_back(ktn::buildFunction(cursor));
+                            break;
+                        case CXCursor_Destructor:
+                        //	clazz->dtor = getMethodFromCursor(cursor);
+                            break;
+                        case CXCursor_CXXMethod:
+                            if (isOperatorFunction(cursor)) break;
+                            clazz->methods.push_back(ktn::buildFunction(cursor));
+                            if (!clang_CXXMethod_isStatic(cursor)) {
+                            //	clazz->methods.back().setReceiver( CxxType(clazz->fullName(), false, (bool)clang_CXXMethod_isConst(cursor)) );
+                                clazz->methods.back().setReceiver( buildCxxType(parent) );
+                            }
+                            break;
+
+             */
+            if (cursor.kind == CXCursorKind.CXCursor_CXXMethod) {
+                //    val childType = clang_getCursorType(child)
+                //    val typeSpelling = clang_getTypeSpelling(childType).convertAndDispose()
+
+                methods.add(getFunction(cursor))
+            }
+            CXChildVisitResult.CXChildVisit_Continue
+        }
+        methods.forEach { println(it.name); println(it.isConst) }
+        return methods
+    }
+
     private fun createStructDef(structDecl: StructDeclImpl, cursor: CValue<CXCursor>) {
         val type = clang_getCursorType(cursor)
 
@@ -211,6 +247,7 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
         )
 
         structDef.members += fields
+        structDef.methods += getMethods(cursor)
 
         structDecl.def = structDef
     }
@@ -532,7 +569,6 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
 
     fun convertType(type: CValue<CXType>, typeAttributes: CValue<CXTypeAttributes>? = null): Type {
         val spelling = clang_getTypeSpelling(type).convertAndDispose()
-    //    println("$spelling.${clang_getTypeKindSpelling(type.kind).convertAndDispose()}")
         val primitiveType = convertUnqualifiedPrimitiveType(type)
         if (primitiveType != UnsupportedType) {
             return primitiveType
@@ -898,7 +934,15 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
 
         val isVararg = clang_Cursor_isVariadic(cursor) != 0
 
-        return FunctionDecl(name, parameters, returnType, binaryName, isDefined, isVararg)
+        val isConst = clang_CXXMethod_isConst(cursor) != 0
+        val isCxxInstanceMethod = (cursor.kind == CXCursorKind.CXCursor_CXXMethod
+                && clang_CXXMethod_isStatic(cursor) == 0)
+    //    when (cursor.kind) {
+    //       CXCursorKind.CXCursor_CXXMethod -> {
+    //        }
+    //    }
+
+        return FunctionDecl(name, parameters, returnType, binaryName, isDefined, isVararg, isConst, isCxxInstanceMethod)
     }
 
     private fun getObjCMethod(cursor: CValue<CXCursor>): ObjCMethod? {
