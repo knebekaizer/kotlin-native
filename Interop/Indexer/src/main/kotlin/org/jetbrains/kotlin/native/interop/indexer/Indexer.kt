@@ -192,7 +192,7 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
         return StructDeclImpl(typeSpelling, getLocation(cursor))
     }
 
-    private fun getMethods(cursor: CValue<CXCursor>) : List<FunctionDecl> {
+    private fun getMethods(cursor: CValue<CXCursor>, receiver: StructDecl) : List<FunctionDecl> {
         val methods = mutableListOf<FunctionDecl>()
 
         visitChildren(cursor) { cursor, parent ->
@@ -219,11 +219,11 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
                 //    val childType = clang_getCursorType(child)
                 //    val typeSpelling = clang_getTypeSpelling(childType).convertAndDispose()
 
-                methods.add(getFunction(cursor))
+                methods.add(getFunction(cursor, receiver))
             }
             CXChildVisitResult.CXChildVisit_Continue
         }
-        methods.forEach { println(it.name); println(it.isConst) }
+        methods.forEach { println("CxxMethod: ${receiver.spelling}::${it.name}") }
         return methods
     }
 
@@ -247,7 +247,7 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
         )
 
         structDef.members += fields
-        structDef.methods += getMethods(cursor)
+        structDef.methods += getMethods(cursor, structDecl)
 
         structDecl.def = structDef
     }
@@ -919,11 +919,16 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
         }
     }
 
-    private fun getFunction(cursor: CValue<CXCursor>): FunctionDecl {
+    private fun getFunction(cursor: CValue<CXCursor>, receiver: StructDecl? = null): FunctionDecl {
         val name = clang_getCursorSpelling(cursor).convertAndDispose()
         val returnType = convertType(clang_getCursorResultType(cursor), clang_getCursorResultTypeAttributes(cursor))
 
-        val parameters = getFunctionParameters(cursor)
+        val parameters = mutableListOf<Parameter>()
+        receiver?.let { parameters.add(Parameter("self",
+                    PointerType(RecordType(receiver), clang_CXXMethod_isConst(cursor) != 0),
+                    false))
+        }
+        parameters += getFunctionParameters(cursor)
 
         val binaryName = when (library.language) {
             Language.C, Language.OBJECTIVE_C -> clang_Cursor_getMangling(cursor).convertAndDispose()
@@ -934,15 +939,15 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
 
         val isVararg = clang_Cursor_isVariadic(cursor) != 0
 
-        val isConst = clang_CXXMethod_isConst(cursor) != 0
-        val isCxxInstanceMethod = (cursor.kind == CXCursorKind.CXCursor_CXXMethod
-                && clang_CXXMethod_isStatic(cursor) == 0)
-    //    when (cursor.kind) {
-    //       CXCursorKind.CXCursor_CXXMethod -> {
-    //        }
-    //    }
+        val cxxMethodReceiver = receiver?.let {
+            // build C++ receiverType type (aka "this"), only full name and constness are needed
+            assert(cursor.kind == CXCursorKind.CXCursor_CXXMethod) // "Expecting C++ method ${receiverType.spelling}::$name but cursor kind is incorrect"
+            if (clang_CXXMethod_isStatic(cursor) == 0)
+                PointerType(RecordType(receiver), clang_CXXMethod_isConst(cursor) != 0)
+            else null
+        }
 
-        return FunctionDecl(name, parameters, returnType, binaryName, isDefined, isVararg, isConst, isCxxInstanceMethod)
+        return FunctionDecl(name, parameters, returnType, binaryName, isDefined, isVararg, cxxMethodReceiver)
     }
 
     private fun getObjCMethod(cursor: CValue<CXCursor>): ObjCMethod? {
