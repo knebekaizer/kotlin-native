@@ -264,7 +264,13 @@ class StubIrBridgeBuilder(
                 bridgeArguments,
                 independent = false
         ) { nativeValues ->
-            "${if (function.isCxxInstanceMethod) "((TheStruct*)self)->" else ""}${origin.function.name}(${nativeValues.joinToString()})"
+        //    val params = function.receiver?.let { nativeValues.drop(1) } ?: nativeValues
+            function.receiver?.let {
+                "(${nativeValues[0]})->${origin.function.name}(${nativeValues.drop(1).joinToString()})"
+            } ?: "${origin.function.name}(${nativeValues.joinToString()})"
+                //   val params = if (function.receiver != null) nativeValues.drop(1)  else nativeValues
+                //   "${origin.function.name}(${params.joinToString()})"
+
         }
         bodyGenerator.returnResult(result)
         functionBridgeBodies[function] = bodyGenerator.build()
