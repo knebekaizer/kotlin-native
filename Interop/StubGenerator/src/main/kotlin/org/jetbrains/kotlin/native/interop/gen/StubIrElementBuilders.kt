@@ -65,9 +65,9 @@ internal class StructStubBuilder(
         }
         val classifier = context.getKotlinClassForPointed(decl)
 
-        // TODO fixme
+        // TODO dirty, fixme
         var methods: List<FunctionStub> =
-        def.methods.map { func -> (FunctionStubBuilder(context, func).build() as List<FunctionStub>)[0]}
+            def.methods.map { func -> (FunctionStubBuilder(context, func).build() as List<FunctionStub>)[0]}
 
 
         val fields: List<PropertyStub?> = def.fields.map { field ->
@@ -87,7 +87,7 @@ internal class StructStubBuilder(
                         emptyList()
                     }
                     val kind = PropertyStub.Kind.Val(PropertyAccessor.Getter.ArrayMemberAt(offset))
-                    // TODO: Should receiver be added?
+                    // TODO: Should receiverType be added?
                     PropertyStub(field.name, WrapperStubType(type), kind, annotations = annotations)
                 } else {
                     val pointedType = WrapperStubType(fieldRefType.pointedType)
@@ -351,6 +351,8 @@ internal class FunctionStubBuilder(
             context.mirror(func.returnType).argType
         })
 
+        val receiverStub = func.receiverType?.let {
+            ReceiverParameterStub(WrapperStubType(context.mirror(func.receiverType as PointerType).argType))}
 
         val annotations: List<AnnotationStub>
         val mustBeExternal: Boolean
@@ -370,9 +372,8 @@ internal class FunctionStubBuilder(
                 StubOrigin.Function(func),
                 annotations,
                 mustBeExternal,
-                null,
-                MemberStubModality.FINAL,
-                func.isCxxInstanceMethod
+                receiverStub,
+                MemberStubModality.FINAL
         )
         return listOf(functionStub)
     }
