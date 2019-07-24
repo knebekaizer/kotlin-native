@@ -69,7 +69,6 @@ internal class StructStubBuilder(
         var methods: List<FunctionStub> =
             def.methods.map { func -> (FunctionStubBuilder(context, func).build() as List<FunctionStub>)[0]}
 
-
         val fields: List<PropertyStub?> = def.fields.map { field ->
             try {
                 assert(field.name.isNotEmpty())
@@ -87,7 +86,7 @@ internal class StructStubBuilder(
                         emptyList()
                     }
                     val kind = PropertyStub.Kind.Val(PropertyAccessor.Getter.ArrayMemberAt(offset))
-                    // TODO: Should receiverType be added?
+                    // TODO: Should receiver be added?
                     PropertyStub(field.name, WrapperStubType(type), kind, annotations = annotations)
                 } else {
                     val pointedType = WrapperStubType(fieldRefType.pointedType)
