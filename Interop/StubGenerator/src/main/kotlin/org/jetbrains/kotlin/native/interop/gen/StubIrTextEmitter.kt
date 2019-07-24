@@ -221,7 +221,8 @@ class StubIrTextEmitter(
             element.annotations.forEach {
                 out(renderAnnotation(it))
             }
-            val parameters = element.parameters.joinToString(prefix = "(", postfix = ")") { renderFunctionParameter(it) }
+            val kotlinParams = element.receiver?. let { element.parameters.drop(1) } ?: element.parameters
+            val parameters = kotlinParams.joinToString(prefix = "(", postfix = ")") { renderFunctionParameter(it) }
             val receiver = element.receiver?.let { renderFunctionReceiver(it) + "." } ?: ""
             val typeParameters = renderTypeParameters(element.typeParameters)
             val header = "${modality}fun$typeParameters $receiver${element.name.asSimpleName()}$parameters: ${renderStubType(element.returnType)}"
