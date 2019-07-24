@@ -235,9 +235,9 @@ class StubIrBridgeBuilder(
             isVararg = isVararg or parameter.isVararg
             val parameterName = parameter.name.asSimpleName()
             val bridgeArgument = when {
-            //    function.receiver != null && index == 0 -> {
-            //        "rawPtr"
-            //    }
+                function.receiver != null && index == 0 -> {
+                    "rawPtr"
+                }
                 parameter in builderResult.bridgeGenerationComponents.cStringParameters -> {
                     bodyGenerator.pushMemScoped()
                     "$parameterName?.cstr?.getPointer(memScope)"
