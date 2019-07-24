@@ -97,8 +97,6 @@ class SimpleBridgeGeneratorImpl(
             "p${it.index}" to it.value.type.nativeType
         }
 
-     //   cFunctionParameters.add(0, Pair("void* ", "self"))
-
         val joinedCParameters = cFunctionParameters.joinToString { (name, type) -> "$type $name" }
         val cReturnType = returnType.nativeType
 
