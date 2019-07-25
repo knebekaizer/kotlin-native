@@ -118,9 +118,6 @@ class SimpleBridgeGeneratorImpl(
             KotlinPlatform.NATIVE -> {
                 val functionName = pkgName.replace(INVALID_CLANG_IDENTIFIER_REGEX, "_") + "_$kotlinFunctionName"
                 if (independent) kotlinLines.add("@" + topLevelKotlinScope.reference(KotlinTypes.independent))
-             //   kotlinLines.add("#ifdef __cplusplus")
-            //    kotlinLines.add("extern \"C\"")
-            //    kotlinLines.add("#endif")
                 kotlinLines.add("@SymbolName(${functionName.quoteAsKotlinLiteral()})")
                 "extern \"C\" $cReturnType $functionName ($joinedCParameters)"
             }
