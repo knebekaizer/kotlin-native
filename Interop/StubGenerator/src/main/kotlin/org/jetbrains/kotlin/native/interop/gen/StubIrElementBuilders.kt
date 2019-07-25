@@ -371,7 +371,7 @@ internal class FunctionStubBuilder(
                 StubOrigin.Function(func),
                 annotations,
                 mustBeExternal,
-                receiverStub,
+                null, // receiverStub,
                 MemberStubModality.FINAL
         )
         return listOf(functionStub)
