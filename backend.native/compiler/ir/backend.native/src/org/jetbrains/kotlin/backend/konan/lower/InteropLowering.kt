@@ -876,7 +876,7 @@ private class InteropTransformer(val context: Context, override val irFile: IrFi
         val function = expression.symbol.owner
         val inlinedClass = function.returnType.getInlinedClassNative()
         if (inlinedClass?.descriptor == interop.cPointer || inlinedClass?.descriptor == interop.nativePointed) {
-            throw Error("Native interop types constructors must not be called directly")
+    //        throw Error("Native interop types constructors must not be called directly") // why not?
         }
         return expression
     }
