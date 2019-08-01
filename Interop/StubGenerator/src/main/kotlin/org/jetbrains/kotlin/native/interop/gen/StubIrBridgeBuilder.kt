@@ -230,7 +230,7 @@ class StubIrBridgeBuilder(
     private fun generateBridgeBody(function: FunctionStub) {
         assert(function.origin is StubOrigin.Function) { "Can't create bridge for ${function.name}" }
         val origin = function.origin as StubOrigin.Function
-        val isCxxInstanceMethod = function.origin.function.receiverType != null
+        val isCxxInstanceMethod = origin.function.receiverType != null
         val bodyGenerator = KotlinCodeBuilder(scope = kotlinFile)
         val bridgeArguments = mutableListOf<TypedKotlinValue>()
         var isVararg = false
@@ -272,7 +272,6 @@ class StubIrBridgeBuilder(
                 independent = false
         ) { nativeValues ->
             origin.function.receiverType?.let {
-        //    function.receiver?.let {
                 "(${nativeValues[0]})->${origin.function.name}(${nativeValues.drop(1).joinToString()})"
             } ?: "${origin.function.name}(${nativeValues.joinToString()})"
         }
