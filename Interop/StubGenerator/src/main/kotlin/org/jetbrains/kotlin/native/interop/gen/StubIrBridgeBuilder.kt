@@ -6,6 +6,7 @@ package org.jetbrains.kotlin.native.interop.gen
 
 import org.jetbrains.kotlin.native.interop.gen.jvm.KotlinPlatform
 import org.jetbrains.kotlin.native.interop.indexer.ObjCProtocol
+import org.jetbrains.kotlin.native.interop.indexer.isCPlusPlus
 import org.jetbrains.kotlin.utils.addToStdlib.firstIsInstanceOrNull
 
 class BridgeBuilderResult(
@@ -57,7 +58,8 @@ class StubIrBridgeBuilder(
                         override val mappingBridgeGenerator: MappingBridgeGenerator
                             get() = this@StubIrBridgeBuilder.mappingBridgeGenerator
                     },
-                    topLevelKotlinScope = kotlinFile
+                    topLevelKotlinScope = kotlinFile,
+                    isCPPContext = context.configuration.library.isCPlusPlus()
             )
 
     private val mappingBridgeGenerator: MappingBridgeGenerator =
