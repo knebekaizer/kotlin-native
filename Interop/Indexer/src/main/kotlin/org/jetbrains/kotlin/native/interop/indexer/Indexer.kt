@@ -215,11 +215,18 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
                             break;
 
              */
-            if (cursor.kind == CXCursorKind.CXCursor_CXXMethod) {
-                //    val childType = clang_getCursorType(child)
-                //    val typeSpelling = clang_getTypeSpelling(childType).convertAndDispose()
-
-                methods.add(getFunction(cursor, receiver))
+            when (cursor.kind) {
+				CXCursorKind.CXCursor_CXXMethod -> {
+					val isOperatorFunction = (clang_getCursorSpelling(cursor).convertAndDispose().take(8) == "operator")
+					// operators are Not Implemented Yet
+					if (!isOperatorFunction) { 
+	                	methods.add(getFunction(cursor, receiver))
+					}
+				}
+				CXCursorKind.CXCursor_Constructor -> 
+					methods.add(getFunction(cursor, receiver)) // methods.add(getCxxConstructor(cursor, receiver))
+			//	CXCursorKind.CXCursor_Destructor ->
+			//		methods.add(getFunction(cursor, receiver)) // methods.add(getCxxDenstructor(cursor, receiver))
             }
             CXChildVisitResult.CXChildVisit_Continue
         }
@@ -941,7 +948,7 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
 
         val cxxMethodReceiver = receiver?.let {
             // build C++ receiverType type (aka "this"), only full name and constness are needed
-            assert(cursor.kind == CXCursorKind.CXCursor_CXXMethod) // "Expecting C++ method ${receiverType.spelling}::$name but cursor kind is incorrect"
+        //    assert(cursor.kind == CXCursorKind.CXCursor_CXXMethod) // "Expecting C++ method ${receiverType.spelling}::$name but cursor kind is incorrect"
             if (clang_CXXMethod_isStatic(cursor) == 0)
                 PointerType(RecordType(receiver), clang_CXXMethod_isConst(cursor) != 0)
             else null
