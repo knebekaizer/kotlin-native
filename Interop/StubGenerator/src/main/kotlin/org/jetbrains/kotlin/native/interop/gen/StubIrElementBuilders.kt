@@ -350,9 +350,6 @@ internal class FunctionStubBuilder(
             context.mirror(func.returnType).argType
         })
 
-        val receiverStub = func.receiverType?.let {
-            ReceiverParameterStub(WrapperStubType(context.mirror(func.receiverType as PointerType).argType))}
-
         val annotations: List<AnnotationStub>
         val mustBeExternal: Boolean
         if (!func.isVararg || platform != KotlinPlatform.NATIVE) {
@@ -371,7 +368,7 @@ internal class FunctionStubBuilder(
                 StubOrigin.Function(func),
                 annotations,
                 mustBeExternal,
-                null, // receiverStub,
+                null,
                 MemberStubModality.FINAL
         )
         return listOf(functionStub)
