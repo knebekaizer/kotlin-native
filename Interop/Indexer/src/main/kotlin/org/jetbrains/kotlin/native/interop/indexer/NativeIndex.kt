@@ -225,11 +225,28 @@ abstract class ObjCCategory(val name: String, val clazz: ObjCClass) : ObjCContai
  */
 data class Parameter(val name: String?, val type: Type, val nsConsumed: Boolean)
 
+
+enum class CxxMethodKind {
+    Constructor,
+    Destructor,
+    InstanceMember  // virtual or non-virtual instance member method (non-static)
+                    // do we need operators here?
+                    // do we need to distinguish virtual and non-virtual? Static? Final?
+}
+
+/**
+ * C++ class method, constructor or destructor
+ */
+class CxxMethodInfo(val receiverType: PointerType, kind: CxxMethodKind = CxxMethodKind.InstanceMember)
+
+fun CxxMethodInfo.isConst() : Boolean = receiverType.pointeeIsConst
+
+
 /**
  * C function declaration.
  */
 class FunctionDecl(val name: String, val parameters: List<Parameter>, val returnType: Type, val binaryName: String,
-                   val isDefined: Boolean, val isVararg: Boolean, val receiverType: PointerType? = null)
+                   val isDefined: Boolean, val isVararg: Boolean, val receiverType: PointerType? = null, val parents: List<String>? = null, val cxxMethod: CxxMethodInfo? = null)
 
 /**
  * C typedef definition.
