@@ -27,6 +27,10 @@ internal class ObjCExportMapper(
         internal val deprecationResolver: DeprecationResolver? = null,
         private val local: Boolean = false
 ) {
+    companion object {
+        val maxFunctionTypeParameterCount get() = KONAN_FUNCTION_INTERFACES_MAX_PARAMETERS
+    }
+
     fun getCustomTypeMapper(descriptor: ClassDescriptor): CustomTypeMapper? = CustomTypeMappers.getMapper(descriptor)
 
     val hiddenTypes: Set<ClassId> get() = CustomTypeMappers.hiddenTypes
