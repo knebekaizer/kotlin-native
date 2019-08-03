@@ -5,6 +5,7 @@
 package org.jetbrains.kotlin.native.interop.gen
 
 import org.jetbrains.kotlin.native.interop.indexer.ObjCProtocol
+import org.jetbrains.kotlin.native.interop.indexer.fullName
 import org.jetbrains.kotlin.native.interop.indexer.isCxxInstanceMethod
 
 private val StubOrigin.ObjCMethod.isOptional: Boolean
@@ -15,6 +16,15 @@ fun FunctionStub.isOptionalObjCMethod(): Boolean = this.origin is StubOrigin.Obj
 
 fun FunctionStub.isCxxInstanceMethod(): Boolean = this.origin is StubOrigin.Function &&
         this.origin.function.isCxxInstanceMethod()
+
+fun FunctionStub.qualifiedName(): String =
+        // TODO FIXME static methods
+        if (this.origin is StubOrigin.Function && !this.origin.function.isCxxInstanceMethod()) {
+            this.origin.function.fullName()
+        } else {
+            name
+        }
+
 
 val StubContainer.isInterface: Boolean
     get() = if (this is ClassStub.Simple) {
