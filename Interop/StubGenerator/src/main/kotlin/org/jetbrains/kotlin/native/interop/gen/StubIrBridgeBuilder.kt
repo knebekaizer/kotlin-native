@@ -6,6 +6,7 @@ package org.jetbrains.kotlin.native.interop.gen
 
 import org.jetbrains.kotlin.native.interop.gen.jvm.KotlinPlatform
 import org.jetbrains.kotlin.native.interop.indexer.ObjCProtocol
+import org.jetbrains.kotlin.native.interop.indexer.fullName
 import org.jetbrains.kotlin.native.interop.indexer.isCPlusPlus
 import org.jetbrains.kotlin.utils.addToStdlib.firstIsInstanceOrNull
 
@@ -230,7 +231,6 @@ class StubIrBridgeBuilder(
     private fun generateBridgeBody(function: FunctionStub) {
         assert(function.origin is StubOrigin.Function) { "Can't create bridge for ${function.name}" }
         val origin = function.origin as StubOrigin.Function
-        val isCxxInstanceMethod = origin.function.receiverType != null
         val bodyGenerator = KotlinCodeBuilder(scope = kotlinFile)
         val bridgeArguments = mutableListOf<TypedKotlinValue>()
         var isVararg = false
@@ -238,7 +238,7 @@ class StubIrBridgeBuilder(
             isVararg = isVararg or parameter.isVararg
             val parameterName = parameter.name.asSimpleName()
             val bridgeArgument = when {
-                isCxxInstanceMethod && index == 0 -> {
+                function.isCxxInstanceMethod() && index == 0 -> {
                     "rawPtr"
                 }
                 parameter in builderResult.bridgeGenerationComponents.cStringParameters -> {
@@ -271,9 +271,11 @@ class StubIrBridgeBuilder(
                 bridgeArguments,
                 independent = false
         ) { nativeValues ->
-            origin.function.receiverType?.let {
+            if (function.isCxxInstanceMethod()) {
                 "(${nativeValues[0]})->${origin.function.name}(${nativeValues.drop(1).joinToString()})"
-            } ?: "${origin.function.name}(${nativeValues.joinToString()})"
+            } else {
+                "${origin.function.fullName()}(${nativeValues.joinToString()})"
+            }
         }
         bodyGenerator.returnResult(result)
         functionBridgeBodies[function] = bodyGenerator.build()

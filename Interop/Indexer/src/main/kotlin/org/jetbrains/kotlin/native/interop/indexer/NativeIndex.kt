@@ -248,6 +248,11 @@ fun CxxMethodInfo.isConst() : Boolean = receiverType.pointeeIsConst
 class FunctionDecl(val name: String, val parameters: List<Parameter>, val returnType: Type, val binaryName: String,
                    val isDefined: Boolean, val isVararg: Boolean, val receiverType: PointerType? = null, val parents: List<String>? = null, val cxxMethod: CxxMethodInfo? = null)
 
+
+fun FunctionDecl.fullName() = parents?. let { (parents + name).joinToString("::") } ?: name
+fun FunctionDecl.isCxxInstanceMethod(): Boolean = this.receiverType != null
+
+
 /**
  * C typedef definition.
  *

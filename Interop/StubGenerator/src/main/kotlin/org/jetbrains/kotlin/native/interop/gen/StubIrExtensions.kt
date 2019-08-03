@@ -5,12 +5,16 @@
 package org.jetbrains.kotlin.native.interop.gen
 
 import org.jetbrains.kotlin.native.interop.indexer.ObjCProtocol
+import org.jetbrains.kotlin.native.interop.indexer.isCxxInstanceMethod
 
 private val StubOrigin.ObjCMethod.isOptional: Boolean
     get() = container is ObjCProtocol && method.isOptional
 
 fun FunctionStub.isOptionalObjCMethod(): Boolean = this.origin is StubOrigin.ObjCMethod &&
         this.origin.isOptional
+
+fun FunctionStub.isCxxInstanceMethod(): Boolean = this.origin is StubOrigin.Function &&
+        this.origin.function.isCxxInstanceMethod()
 
 val StubContainer.isInterface: Boolean
     get() = if (this is ClassStub.Simple) {
