@@ -972,10 +972,6 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
         return if (parents.isNotEmpty()) parents else null
     }
 
-
-    fun FunctionDecl.fullName() = parents?. let { (parents + name).joinToString("::") } ?: name
-
-
     private fun getFunction(cursor: CValue<CXCursor>, receiver: StructDecl? = null): FunctionDecl {
         val name = clang_getCursorSpelling(cursor).convertAndDispose()
         val returnType = convertType(clang_getCursorResultType(cursor), clang_getCursorResultTypeAttributes(cursor))
@@ -1008,7 +1004,7 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
         val f = FunctionDecl(name, parameters, returnType, binaryName, isDefined, isVararg, cxxMethodReceiver, parents)
         println("fullName = ${f.fullName()}")
 
-        return FunctionDecl(name, parameters, returnType, binaryName, isDefined, isVararg, cxxMethodReceiver)
+        return FunctionDecl(name, parameters, returnType, binaryName, isDefined, isVararg, cxxMethodReceiver, parents)
     }
 
     private fun getObjCMethod(cursor: CValue<CXCursor>): ObjCMethod? {
