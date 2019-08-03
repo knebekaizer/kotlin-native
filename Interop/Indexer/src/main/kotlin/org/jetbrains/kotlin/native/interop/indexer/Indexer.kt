@@ -951,16 +951,20 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
     }
 
     private fun getParentNames(cursor: CValue<CXCursor>) : List<String>? {
-        /// TODO FIXME this doesn't work for anonymous C++ struct (such as typedef struct { void foo(); } TypeDefName)  as well as anon namespace
+        // This doesn't work for anonymous C++ struct (such as typedef struct { void foo(); } TypeDefName)  as well as anon namespace
         // In contrast, clang_getTypeSpelling return fully qualified name for struct & class (incl. typedef anon struct),
         // but does not help for anything elde such as template member, namespace etc
+        // So, TODO Use ultimately clang_getTypeSpelling for CXType_Record (no traversing needed) and traverse up the whole hierarchy for anythiong else
+        // Unfortunately, this won't work too for variable decl with anon type like that: ''struct { void foo(); } x;''
+        // while function is accessible as x.foo()
 
         // skip this (zero) level:
-        assert (clang_isDeclaration(clang_getCursorKind(cursor)) != 0)
+        assert (clang_isDeclaration(cursor.kind) != 0)
+
         var cur = clang_getCursorSemanticParent(cursor)
 
         val parents = mutableListOf<String>()
-        while (clang_isDeclaration(clang_getCursorKind(cur)) != 0) {
+        while (clang_isDeclaration(cur.kind) != 0) {
             parents.add(0, clang_getCursorSpelling(cur).convertAndDispose())
             // parents.add(0, clang_getTypeSpelling(clang_getCursorType(cur)).convertAndDispose()) // this is not perfect too
             cur = clang_getCursorSemanticParent(cur)
