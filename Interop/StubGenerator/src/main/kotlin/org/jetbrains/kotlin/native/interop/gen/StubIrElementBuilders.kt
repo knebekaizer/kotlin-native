@@ -65,9 +65,10 @@ internal class StructStubBuilder(
         }
         val classifier = context.getKotlinClassForPointed(decl)
 
-        // TODO dirty, fixme
         var methods: List<FunctionStub> =
-            def.methods.map { func -> (FunctionStubBuilder(context, func).build() as List<FunctionStub>)[0]}
+            def.methods
+                    .filter { it.isCxxInstanceMember() }
+                    .map { func -> (FunctionStubBuilder(context, func).build() as List<FunctionStub>)[0]}
 
         val fields: List<PropertyStub?> = def.fields.map { field ->
             try {
@@ -129,7 +130,13 @@ internal class StructStubBuilder(
         val companionSuper = SymbolicStubType("Type")
         val typeSize = listOf(IntegralConstantStub(def.size, 4, true), IntegralConstantStub(def.align.toLong(), 4, true))
         val companionSuperInit = SuperClassInit(companionSuper, typeSize)
-        val companion = ClassStub.Companion(companionSuperInit)
+
+        var classMethods: List<FunctionStub> =
+                def.methods
+                        .filter { !it.isCxxInstanceMember() }
+                        .map { func -> (FunctionStubBuilder(context, func).build() as List<FunctionStub>)[0]}
+        val companion = ClassStub.Companion(companionSuperInit,
+                functions = classMethods)
 
         return listOf(ClassStub.Simple(
                 classifier,

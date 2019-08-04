@@ -41,7 +41,7 @@ class MappingBridgeGeneratorImpl(
     ): KotlinExpression {
         val bridgeArguments = mutableListOf<BridgeTypedKotlinValue>()
 
-        if (cxxReceiverType != null) {
+        if (nativeBacked is FunctionStub && nativeBacked.isCxxInstanceMember()) {
             bridgeArguments.add(BridgeTypedKotlinValue(BridgedType.NATIVE_PTR, "rawPtr"))
             kotlinValues.drop(1)
         } else {
