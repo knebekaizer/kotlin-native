@@ -5,10 +5,7 @@
 package org.jetbrains.kotlin.native.interop.gen
 
 import org.jetbrains.kotlin.native.interop.gen.jvm.KotlinPlatform
-import org.jetbrains.kotlin.native.interop.indexer.ObjCProtocol
-import org.jetbrains.kotlin.native.interop.indexer.cxxReceiverType
-import org.jetbrains.kotlin.native.interop.indexer.fullName
-import org.jetbrains.kotlin.native.interop.indexer.isCPlusPlus
+import org.jetbrains.kotlin.native.interop.indexer.*
 import org.jetbrains.kotlin.utils.addToStdlib.firstIsInstanceOrNull
 
 class BridgeBuilderResult(
@@ -272,10 +269,15 @@ class StubIrBridgeBuilder(
                 bridgeArguments,
                 independent = false
         ) { nativeValues ->
-            if (function.isCxxInstanceMember()) {
-                "(${nativeValues[0]})->${origin.function.name}(${nativeValues.drop(1).joinToString()})"
-            } else {
-                "${origin.function.fullName()}(${nativeValues.joinToString()})"
+            with (origin.function) {
+                when  {
+                    isCxxInstanceMember() ->
+                        "(${nativeValues[0]})->${name}(${nativeValues.drop(1).joinToString()})"
+                    isCxxConstructor() ->
+                        "new ${cxxReceiverClass()?.spelling}(${nativeValues.joinToString()})"
+                    else ->
+                        "${fullName()}(${nativeValues.joinToString()})"
+                }
             }
         }
         bodyGenerator.returnResult(result)
