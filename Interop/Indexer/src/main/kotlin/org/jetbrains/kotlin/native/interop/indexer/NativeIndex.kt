@@ -253,7 +253,18 @@ class FunctionDecl(val name: String, val parameters: List<Parameter>, val return
 
 
 fun FunctionDecl.fullName() = parents?. let { (parents + name).joinToString("::") } ?: name
+
+/**
+ * C++ virtual or non-virtual instance member, i.e. has "this" receiver
+ */
 fun FunctionDecl.isCxxInstanceMember(): Boolean = this.cxxMethod != null  && this.cxxMethod.kind == CxxMethodKind.InstanceMember
+
+/**
+ * C++ class or instance member function, i.e. any function in the scope of class/struct: method, static, ctor, dtor, cast operator, etc
+ */
+fun FunctionDecl.isCxxMember(): Boolean = this.cxxMethod != null
+        && this.cxxMethod.kind != CxxMethodKind.None // TODO remove additional check as it is just "not supported yet" workaround
+
 fun FunctionDecl.cxxReceiverType(): PointerType? = this.cxxMethod?.receiverType
 
 /**
