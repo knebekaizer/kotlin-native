@@ -973,8 +973,8 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
     }
 
     private fun getFunction(cursor: CValue<CXCursor>, receiver: StructDecl? = null): FunctionDecl {
-        val name = clang_getCursorSpelling(cursor).convertAndDispose()
-        val returnType = convertType(clang_getCursorResultType(cursor), clang_getCursorResultTypeAttributes(cursor))
+        var name = clang_getCursorSpelling(cursor).convertAndDispose()
+        var returnType = convertType(clang_getCursorResultType(cursor), clang_getCursorResultTypeAttributes(cursor))
 
         val parameters = mutableListOf<Parameter>()
         parameters += getFunctionParameters(cursor)
@@ -994,7 +994,11 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
                 PointerType(RecordType(receiver),
                         clang_CXXMethod_isConst(cursor) != 0), // CXCursor_ConversionFunction has constness too
                 when (cursor.kind) {
-                    CXCursorKind.CXCursor_Constructor -> CxxMethodKind.Constructor
+                    CXCursorKind.CXCursor_Constructor -> {
+                        returnType = PointerType(RecordType(receiver))
+                        name = "__create__" // Or do you prefer "__init__"? It does allocation however
+                        CxxMethodKind.Constructor
+                    }
                     CXCursorKind.CXCursor_Destructor -> CxxMethodKind.Destructor
                     // CXCursorKind.CXCursor_ConversionFunction -> ...
                     CXCursorKind.CXCursor_CXXMethod ->
