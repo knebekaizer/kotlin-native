@@ -977,10 +977,6 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
         val returnType = convertType(clang_getCursorResultType(cursor), clang_getCursorResultTypeAttributes(cursor))
 
         val parameters = mutableListOf<Parameter>()
-        receiver?.let { parameters.add(Parameter("self",
-                    PointerType(RecordType(receiver), clang_CXXMethod_isConst(cursor) != 0),
-                    false))
-        }
         parameters += getFunctionParameters(cursor)
 
         val binaryName = when (library.language) {
@@ -992,19 +988,30 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
 
         val isVararg = clang_Cursor_isVariadic(cursor) != 0
 
-        val cxxMethodReceiver = receiver?.let {
-            // build C++ receiverType type (aka "this"), only full name and constness are needed
-        //    assert(cursor.kind == CXCursorKind.CXCursor_CXXMethod) // "Expecting C++ method ${receiverType.spelling}::$name but cursor kind is incorrect"
-            if (clang_CXXMethod_isStatic(cursor) == 0)
-                PointerType(RecordType(receiver), clang_CXXMethod_isConst(cursor) != 0)
-            else null
+        // TODO Do the following if clang_getCursorLanguage(cursor) == CXLanguageKind.CXLanguage_CPlusPlus ...
+        val parents = getParentNames(cursor)
+        val cxxMethodInfo = receiver?.let { CxxMethodInfo(
+                PointerType(RecordType(receiver),
+                        clang_CXXMethod_isConst(cursor) != 0), // CXCursor_ConversionFunction has constness too
+                when (cursor.kind) {
+                    CXCursorKind.CXCursor_Constructor -> CxxMethodKind.Constructor
+                    CXCursorKind.CXCursor_Destructor -> CxxMethodKind.Destructor
+                    // CXCursorKind.CXCursor_ConversionFunction -> ...
+                    CXCursorKind.CXCursor_CXXMethod ->
+                        if (clang_CXXMethod_isStatic(cursor) != 0) {
+                            CxxMethodKind.StaticMember
+                        } else {
+                            parameters.add(0, Parameter("self",
+                                    PointerType(RecordType(receiver), clang_CXXMethod_isConst(cursor) != 0),
+                                    false))
+                            CxxMethodKind.InstanceMember
+                        }
+                    else -> CxxMethodKind.None.also {assert(false) { "Unexpected cursor.kind ${clang_getCursorKindSpelling(cursor.kind).convertAndDispose()}" }}
+                }
+        )
         }
 
-        val parents = getParentNames(cursor)
-        val f = FunctionDecl(name, parameters, returnType, binaryName, isDefined, isVararg, cxxMethodReceiver, parents)
-        println("fullName = ${f.fullName()}")
-
-        return FunctionDecl(name, parameters, returnType, binaryName, isDefined, isVararg, cxxMethodReceiver, parents)
+        return FunctionDecl(name, parameters, returnType, binaryName, isDefined, isVararg, parents, cxxMethodInfo)
     }
 
     private fun getObjCMethod(cursor: CValue<CXCursor>): ObjCMethod? {

@@ -6,6 +6,7 @@ package org.jetbrains.kotlin.native.interop.gen
 
 import org.jetbrains.kotlin.native.interop.gen.jvm.KotlinPlatform
 import org.jetbrains.kotlin.native.interop.indexer.ObjCProtocol
+import org.jetbrains.kotlin.native.interop.indexer.cxxReceiverType
 import org.jetbrains.kotlin.native.interop.indexer.fullName
 import org.jetbrains.kotlin.native.interop.indexer.isCPlusPlus
 import org.jetbrains.kotlin.utils.addToStdlib.firstIsInstanceOrNull
@@ -238,7 +239,7 @@ class StubIrBridgeBuilder(
             isVararg = isVararg or parameter.isVararg
             val parameterName = parameter.name.asSimpleName()
             val bridgeArgument = when {
-                function.isCxxInstanceMethod() && index == 0 -> {
+                function.isCxxInstanceMember() && index == 0 -> {
                     "rawPtr"
                 }
                 parameter in builderResult.bridgeGenerationComponents.cStringParameters -> {
@@ -267,11 +268,11 @@ class StubIrBridgeBuilder(
                 bodyGenerator,
                 function,
                 origin.function.returnType,
-                origin.function.receiverType,
+                origin.function.cxxReceiverType(), // TODO Parameter is redundunt: use nativeBacked as FunctionStub instead
                 bridgeArguments,
                 independent = false
         ) { nativeValues ->
-            if (function.isCxxInstanceMethod()) {
+            if (function.isCxxInstanceMember()) {
                 "(${nativeValues[0]})->${origin.function.name}(${nativeValues.drop(1).joinToString()})"
             } else {
                 "${origin.function.fullName()}(${nativeValues.joinToString()})"
