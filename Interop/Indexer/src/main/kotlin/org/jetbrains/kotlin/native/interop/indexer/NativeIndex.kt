@@ -227,17 +227,19 @@ data class Parameter(val name: String?, val type: Type, val nsConsumed: Boolean)
 
 
 enum class CxxMethodKind {
+    None, // not supported yet?
     Constructor,
     Destructor,
+    StaticMember,
     InstanceMember  // virtual or non-virtual instance member method (non-static)
                     // do we need operators here?
                     // do we need to distinguish virtual and non-virtual? Static? Final?
 }
 
 /**
- * C++ class method, constructor or destructor
+ * C++ class method, constructor or destructor details
  */
-class CxxMethodInfo(val receiverType: PointerType, kind: CxxMethodKind = CxxMethodKind.InstanceMember)
+class CxxMethodInfo(val receiverType: PointerType, val kind: CxxMethodKind = CxxMethodKind.InstanceMember)
 
 fun CxxMethodInfo.isConst() : Boolean = receiverType.pointeeIsConst
 
@@ -246,12 +248,13 @@ fun CxxMethodInfo.isConst() : Boolean = receiverType.pointeeIsConst
  * C function declaration.
  */
 class FunctionDecl(val name: String, val parameters: List<Parameter>, val returnType: Type, val binaryName: String,
-                   val isDefined: Boolean, val isVararg: Boolean, val receiverType: PointerType? = null, val parents: List<String>? = null, val cxxMethod: CxxMethodInfo? = null)
+                   val isDefined: Boolean, val isVararg: Boolean,
+                   val parents: List<String>? = null, val cxxMethod: CxxMethodInfo? = null)
 
 
 fun FunctionDecl.fullName() = parents?. let { (parents + name).joinToString("::") } ?: name
-fun FunctionDecl.isCxxInstanceMethod(): Boolean = this.receiverType != null
-
+fun FunctionDecl.isCxxInstanceMember(): Boolean = this.cxxMethod != null  && this.cxxMethod.kind == CxxMethodKind.InstanceMember
+fun FunctionDecl.cxxReceiverType(): PointerType? = this.cxxMethod?.receiverType
 
 /**
  * C typedef definition.
