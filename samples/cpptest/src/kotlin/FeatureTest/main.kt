@@ -1,18 +1,53 @@
-//package sample.spdlog
-//package test
+//package test.cpp
+
 
 import kotlinx.cinterop.*
 import platform.posix.*
 import platform.posix.memcpy
 import test.*
+import kotlin.test.*
+
+class FeatureTest {
+
+    @Test fun ctorDefault() {
+        val x = ns__CppTest(ns__CppTest.__create__().rawValue)
+        assertEquals(42, x.iPub)
+        assertEquals(42, x.foo(null))
+        assertEquals(43, x.foo(x.ptr))
+    }
+
+    @Test fun ctorWithParam() {
+        val x = ns__CppTest(ns__CppTest.__create__(1001, 0.0).rawValue)
+        assertEquals(1001, x.iPub)
+        assertEquals(1001, x.foo(null))
+        assertEquals(1002, x.foo(x.ptr))
+    }
+
+    @Test fun copyCtor(y: ns__CppTest) {
+        val x = ns__CppTest(ns__CppTest.__create__(y.ptr).rawValue)
+        assertEquals(y.iPub, x.iPub)
+    }
+
+    @Test fun publicField(x : ns__CppTest) {
+        x.iPub = 21
+        assertEquals(22, x.foo(x.ptr))
+    }
+
+}
 
 fun main() {
-    val name = "You"
-    println("Hey $name")
-    val theStruct = interpretPointed<ns__CppTest>(ns__create().rawValue)
-    theStruct.iPub = 21
-    theStruct.foo(theStruct.ptr)
 
+    val testRun = FeatureTest()
+    testRun.ctorDefault()
+    testRun.ctorWithParam()
+
+    val a1 = interpretPointed<ns__CppTest>(ns__create().rawValue)
+    testRun.publicField(a1)
+
+    a1.iPub = 112
+    testRun.copyCtor(a1)
+
+    println("*** UT passed ***")
     testStatic()
 
     test0()
@@ -52,7 +87,7 @@ fun testCtor1() {
     xs.foo(xs.ptr)
 
     println("testCtor1: ns__CppTest(ns__CppTest.__create__(1001).rawValue)")
-    val x2 = ns__CppTest(ns__CppTest.__create__(1001).rawValue)
+    val x2 = ns__CppTest(ns__CppTest.__create__(1001, 2.718).rawValue)
     x2.foo(null)
     x2.foo(x2.ptr)
 
@@ -74,7 +109,7 @@ fun testCtor3() {
 fun test0() {
     memScoped {
         val aStruct = alloc<ns__NoName>()
-        aStruct.noNameMember()
+        aStruct.noNameMember(null) // this must be an error
     }
 }
 

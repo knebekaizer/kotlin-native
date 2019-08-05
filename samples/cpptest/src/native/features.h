@@ -3,16 +3,18 @@ namespace ns {
 
 typedef class {
 public:
-	void noNameMember();
+	void noNameMember(const int& iRef);
 } NoName;
 
 class CppTest {
 public:
 	static int s_fun();
 
-	CppTest();
+	CppTest() = default;
 
-	CppTest(int i);
+	CppTest(const CppTest&) = default;
+
+	explicit CppTest(int i, double j = 3.14);
 
 	~CppTest() = default;
 
@@ -47,6 +49,7 @@ CppTest* create();
 namespace ns2 {
 	::CppTest* create();
 
+/*
 template <typename T> struct TmplStruct {
 public:
 	void baz() const {}
@@ -57,4 +60,12 @@ public:
 	void baz() const {}
 };
 
+typedef class TmplStruct<int> IntTmplStruct;
+IntTmplStruct intTmplStruct;
+
+struct Smth {
+    IntTmplStruct intTmplStruct;
+};
+*/
 } // ns2
+
