@@ -207,8 +207,8 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
 				}
 				CXCursorKind.CXCursor_Constructor -> 
 					methods.add(getFunction(cursor, receiver)) // methods.add(getCxxConstructor(cursor, receiver))
-			//	CXCursorKind.CXCursor_Destructor ->
-			//		methods.add(getFunction(cursor, receiver)) // methods.add(getCxxDenstructor(cursor, receiver))
+			 	CXCursorKind.CXCursor_Destructor ->
+					methods.add(getFunction(cursor, receiver)) // methods.add(getCxxDenstructor(cursor, receiver))
             }
             CXChildVisitResult.CXChildVisit_Continue
         }
@@ -976,7 +976,13 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
                         name = "__create__" // Or do you prefer "__init__"? It does allocation however
                         CxxMethodKind.Constructor
                     }
-                    CXCursorKind.CXCursor_Destructor -> CxxMethodKind.Destructor
+                    CXCursorKind.CXCursor_Destructor -> {
+                        name = "__destroy__"
+                        parameters.add(0, Parameter("self",
+                                PointerType(RecordType(receiver), clang_CXXMethod_isConst(cursor) != 0),
+                                false))
+                        CxxMethodKind.Destructor
+                    }
                     // CXCursorKind.CXCursor_ConversionFunction -> ...
                     CXCursorKind.CXCursor_CXXMethod ->
                         if (clang_CXXMethod_isStatic(cursor) != 0) {

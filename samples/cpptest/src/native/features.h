@@ -10,13 +10,13 @@ class CppTest {
 public:
 	static int s_fun();
 
-	CppTest() = default;
+	CppTest();
 
-	CppTest(const CppTest&) = default;
+	CppTest(const CppTest&);
 
 	explicit CppTest(int i, double j = 3.14);
 
-	~CppTest() = default;
+	~CppTest();
 
 
 	int iPub = 42;
@@ -24,6 +24,7 @@ public:
 	virtual int foo(const CppTest*);
 //	int foo(const CppTest*);
 
+    static int counter;
 	template <class X> void fooTmplMember() const;
 private:
 //	CppTest* fct() const;
