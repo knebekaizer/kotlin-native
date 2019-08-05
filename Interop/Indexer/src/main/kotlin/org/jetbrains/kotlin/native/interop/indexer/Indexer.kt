@@ -853,10 +853,10 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
             }
 
             CXIdxEntity_CXXClass -> {
-                if (clang_getCursorType(cursor).kind == CXCursorKind.CXCursor_ClassDecl) {
+            //    if (clang_getCursorType(cursor).kind == CXCursorKind.CXCursor_ClassDecl) {
                     // c++ templates are not supported yet
                     getStructDeclAt(cursor)
-                }
+            //    }
             }
 
             CXIdxEntity_Typedef -> {
