@@ -275,6 +275,9 @@ class StubIrBridgeBuilder(
                         "(${nativeValues[0]})->${name}(${nativeValues.drop(1).joinToString()})"
                     isCxxConstructor() ->
                         "new ${cxxReceiverClass()?.spelling}(${nativeValues.joinToString()})"
+                    isCxxDestructor() -> {
+                        "(${nativeValues[0]})->~${cxxReceiverClass()?.spelling?.substringAfterLast(':')}()"
+                    }
                     else ->
                         "${fullName()}(${nativeValues.joinToString()})"
                 }

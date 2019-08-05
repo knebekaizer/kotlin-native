@@ -10,6 +10,8 @@ void NoName::noNameMember(const int& iRef) {
 	cout << __PRETTY_FUNCTION__ << " invoked" << endl;
 }
 
+int CppTest::counter;
+
 int CppTest::s_fun() {
 	static int counter = 777;
 	cout << __PRETTY_FUNCTION__ << " invoked" << endl;
@@ -22,13 +24,24 @@ int CppTest::foo(const CppTest* x) {
 	return iPub + res;
 }
 
-CppTest::CppTest(int i, double j) : iPub(i) {}
-
-/*
-CppTest::~CppTest() {
-	cout << "~CppTest dtor called" << endl;
+CppTest::CppTest() {
+	cout << ++counter << "\t" << __PRETTY_FUNCTION__ << endl;
 }
-*/
+
+CppTest::CppTest(const CppTest& c) {
+    *this = c;
+	cout << ++counter << "\t" << __PRETTY_FUNCTION__ << endl;
+}
+
+CppTest::CppTest(int i, double j) : iPub(i) {
+	cout << ++counter << "\t" << __PRETTY_FUNCTION__ << endl;
+}
+
+
+CppTest::~CppTest() {
+	cout << --counter << "\t" << __PRETTY_FUNCTION__ << endl;
+}
+
 
 CppTest bar(CppTest* s) {
 	if (s)
