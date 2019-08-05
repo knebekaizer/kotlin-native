@@ -196,25 +196,6 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
         val methods = mutableListOf<FunctionDecl>()
 
         visitChildren(cursor) { cursor, parent ->
-            /*
-            	if (clang_getCXXAccessSpecifier(cursor) == CX_CXXPublic) {
-                    switch (clang_getCursorKind(cursor)) {
-                        case CXCursor_Constructor:
-                            clazz->ctors.push_back(ktn::buildFunction(cursor));
-                            break;
-                        case CXCursor_Destructor:
-                        //	clazz->dtor = getMethodFromCursor(cursor);
-                            break;
-                        case CXCursor_CXXMethod:
-                            if (isOperatorFunction(cursor)) break;
-                            clazz->methods.push_back(ktn::buildFunction(cursor));
-                            if (!clang_CXXMethod_isStatic(cursor)) {
-                            //	clazz->methods.back().setReceiver( CxxType(clazz->fullName(), false, (bool)clang_CXXMethod_isConst(cursor)) );
-                                clazz->methods.back().setReceiver( buildCxxType(parent) );
-                            }
-                            break;
-
-             */
             when (cursor.kind) {
 				CXCursorKind.CXCursor_CXXMethod -> {
 					val isOperatorFunction = (clang_getCursorSpelling(cursor).convertAndDispose().take(8) == "operator")
