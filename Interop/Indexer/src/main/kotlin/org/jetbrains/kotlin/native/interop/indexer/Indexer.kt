@@ -32,6 +32,7 @@ private class StructDefImpl(
         size, align, decl
 ) {
     override val members = mutableListOf<StructMember>()
+    override val methods = mutableListOf<FunctionDecl>()
 }
 
 private class EnumDefImpl(spelling: String, type: Type, override val location: Location) : EnumDef(spelling, type) {
@@ -191,6 +192,29 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
         return StructDeclImpl(typeSpelling, getLocation(cursor))
     }
 
+    private fun getMethods(cursor: CValue<CXCursor>, receiver: StructDecl) : List<FunctionDecl> {
+        val methods = mutableListOf<FunctionDecl>()
+
+        // TODO skip method (function) when encounter UnsupportedType in params or ret value. Otherwise all class methods will be lost due to exception (?)
+            visitChildren(cursor) { cursor, parent ->
+            when (cursor.kind) {
+				CXCursorKind.CXCursor_CXXMethod -> {
+					val isOperatorFunction = (clang_getCursorSpelling(cursor).convertAndDispose().take(8) == "operator")
+					// operators are Not Implemented Yet
+					if (!isOperatorFunction) { 
+	                	methods.add(getFunction(cursor, receiver))
+					}
+				}
+				CXCursorKind.CXCursor_Constructor -> 
+					methods.add(getFunction(cursor, receiver)) // methods.add(getCxxConstructor(cursor, receiver))
+			 	CXCursorKind.CXCursor_Destructor ->
+					methods.add(getFunction(cursor, receiver)) // methods.add(getCxxDenstructor(cursor, receiver))
+            }
+            CXChildVisitResult.CXChildVisit_Continue
+        }
+        return methods
+    }
+
     private fun createStructDef(structDecl: StructDeclImpl, cursor: CValue<CXCursor>) {
         val type = clang_getCursorType(cursor)
 
@@ -205,17 +229,43 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
                 when (cursor.kind) {
                     CXCursorKind.CXCursor_UnionDecl -> StructDef.Kind.UNION
                     CXCursorKind.CXCursor_StructDecl -> StructDef.Kind.STRUCT
+                    CXCursorKind.CXCursor_ClassDecl -> StructDef.Kind.CLASS
                     else -> error(cursor.kind)
                 }
         )
 
         structDef.members += fields
+        structDef.methods += getMethods(cursor, structDecl)
 
         structDecl.def = structDef
     }
 
+    private fun isRecursivelyPublic(c: CValue<CXCursor>) : Boolean {
+        var cursor = c
+        while (clang_isDeclaration(clang_getCursorKind(cursor)) != 0) {
+            val access = clang_getCXXAccessSpecifier(cursor);
+            if (access == CX_CXXAccessSpecifier.CX_CXXPrivate || access == CX_CXXAccessSpecifier.CX_CXXProtected) {
+                return false;
+            }
+
+            if (clang_getCursorLinkage(cursor) == CXLinkageKind.CXLinkage_Internal) {
+                return false;
+            }
+
+            if (clang_getCursorKind(cursor) == CXCursorKind.CXCursor_Namespace
+                    && clang_getCursorSpelling(cursor).convertAndDispose().isEmpty()) {
+                // Anonymous namespace.
+                return false;
+            }
+
+            cursor = clang_getCursorSemanticParent(cursor);
+        }
+
+        return true;
+    }
+
     private fun addDeclaredFields(result: MutableList<StructMember>, structType: CValue<CXType>, containerType: CValue<CXType>) {
-        getFields(containerType).forEach { fieldCursor ->
+        getFields(containerType).filter { fieldCursor -> isRecursivelyPublic(fieldCursor) }.forEach { fieldCursor ->
             val name = getCursorSpelling(fieldCursor)
             if (name.isNotEmpty()) {
                 val fieldType = convertCursorType(fieldCursor)
@@ -500,6 +550,7 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
     }
 
     fun convertType(type: CValue<CXType>, typeAttributes: CValue<CXTypeAttributes>? = null): Type {
+        val spelling = clang_getTypeSpelling(type).convertAndDispose()
         val primitiveType = convertUnqualifiedPrimitiveType(type)
         if (primitiveType != UnsupportedType) {
             return primitiveType
@@ -540,7 +591,7 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
             CXType_Record -> RecordType(getStructDeclAt(clang_getTypeDeclaration(type)))
             CXType_Enum -> EnumType(getEnumDefAt(clang_getTypeDeclaration(type)))
 
-            CXType_Pointer -> {
+            CXType_Pointer, CXType_LValueReference -> {
                 val pointeeType = clang_getPointeeType(type)
                 val pointeeIsConst =
                         (clang_isConstQualifiedType(clang_getCanonicalType(pointeeType)) != 0)
@@ -548,7 +599,8 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
                 val convertedPointeeType = convertType(pointeeType)
                 PointerType(
                         if (convertedPointeeType == UnsupportedType) VoidType else convertedPointeeType,
-                        pointeeIsConst = pointeeIsConst
+                        pointeeIsConst = pointeeIsConst,
+                        isLVReference = (kind == CXType_LValueReference)
                 )
             }
 
@@ -752,6 +804,17 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
             return
         }
 
+        if (!isRecursivelyPublic(cursor)) {
+            // c++ : skip anon namespaces, static functions and variables and private inner classes
+            return
+        }
+
+        /**
+         * TODO It may be better to look at CXTypeKind instead of CXIdxEntity to distinguish C++ classes from templates
+         * C++ templates are also CXIdxEntity_CXXClass but CXCursor_ClassTemplate,
+         * while C++ class is CXCursor_ClassDecl
+         * The same for CXCursor_FunctionDecl vs CXCursor_FunctionTemplate
+         */
         when (kind) {
             CXIdxEntity_Struct, CXIdxEntity_Union -> {
                 if (entityName == null) {
@@ -768,7 +831,10 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
             }
 
             CXIdxEntity_Function -> {
-                if (isSuitableFunction(cursor)) {
+                if (isSuitableFunction(cursor)
+                        // function templates are not supported yet
+                         && clang_getCursorType(cursor).kind != CXCursorKind.CXCursor_FunctionTemplate // does not work
+                ) {
                     functionById.getOrPut(getDeclarationId(cursor)) {
                         getFunction(cursor)
                     }
@@ -850,11 +916,35 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
         }
     }
 
-    private fun getFunction(cursor: CValue<CXCursor>): FunctionDecl {
-        val name = clang_getCursorSpelling(cursor).convertAndDispose()
-        val returnType = convertType(clang_getCursorResultType(cursor), clang_getCursorResultTypeAttributes(cursor))
+    // TODO Refactor this accorging with "package + topLevelName" format in Classifier
+    private fun getParentNames(cursor: CValue<CXCursor>) : List<String>? {
+        // This doesn't work for anonymous C++ struct (such as typedef struct { void foo(); } TypeDefName)  as well as anon namespace
+        // In contrast, clang_getTypeSpelling return fully qualified name for struct & class (incl. typedef anon struct),
+        // but does not help for anything elde such as template member, namespace etc
+        // So, TODO Use ultimately clang_getTypeSpelling for CXType_Record (no traversing needed) and traverse up the whole hierarchy for anythiong else
+        // Unfortunately, this won't work too for variable decl with anon type like that: ''struct { void foo(); } x;''
+        // while function is accessible as x.foo()
 
-        val parameters = getFunctionParameters(cursor)
+        // skip this (zero) level:
+        assert (clang_isDeclaration(cursor.kind) != 0)
+
+        var cur = clang_getCursorSemanticParent(cursor)
+
+        val parents = mutableListOf<String>()
+        while (clang_isDeclaration(cur.kind) != 0) {
+            parents.add(0, clang_getCursorSpelling(cur).convertAndDispose())
+            // parents.add(0, clang_getTypeSpelling(clang_getCursorType(cur)).convertAndDispose()) // this is not perfect too
+            cur = clang_getCursorSemanticParent(cur)
+        }
+        return if (parents.isNotEmpty()) parents else null
+    }
+
+    private fun getFunction(cursor: CValue<CXCursor>, receiver: StructDecl? = null): FunctionDecl {
+        var name = clang_getCursorSpelling(cursor).convertAndDispose()
+        var returnType = convertType(clang_getCursorResultType(cursor), clang_getCursorResultTypeAttributes(cursor))
+
+        val parameters = mutableListOf<Parameter>()
+        parameters += getFunctionParameters(cursor)
 
         val binaryName = when (library.language) {
             Language.C, Language.OBJECTIVE_C -> clang_Cursor_getMangling(cursor).convertAndDispose()
@@ -865,7 +955,40 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
 
         val isVararg = clang_Cursor_isVariadic(cursor) != 0
 
-        return FunctionDecl(name, parameters, returnType, binaryName, isDefined, isVararg)
+        // TODO Do the following if clang_getCursorLanguage(cursor) == CXLanguageKind.CXLanguage_CPlusPlus ...
+        val parents = getParentNames(cursor)
+        val cxxMethodInfo = receiver?.let { CxxMethodInfo(
+                PointerType(RecordType(receiver),
+                        clang_CXXMethod_isConst(cursor) != 0), // CXCursor_ConversionFunction has constness too
+                when (cursor.kind) {
+                    CXCursorKind.CXCursor_Constructor -> {
+                        returnType = PointerType(RecordType(receiver))
+                        name = "__create__" // Or do you prefer "__init__"? It does allocation however
+                        CxxMethodKind.Constructor
+                    }
+                    CXCursorKind.CXCursor_Destructor -> {
+                        name = "__destroy__"
+                        parameters.add(0, Parameter("self",
+                                PointerType(RecordType(receiver), clang_CXXMethod_isConst(cursor) != 0),
+                                false))
+                        CxxMethodKind.Destructor
+                    }
+                    // CXCursorKind.CXCursor_ConversionFunction -> ...
+                    CXCursorKind.CXCursor_CXXMethod ->
+                        if (clang_CXXMethod_isStatic(cursor) != 0) {
+                            CxxMethodKind.StaticMember
+                        } else {
+                            parameters.add(0, Parameter("self",
+                                    PointerType(RecordType(receiver), clang_CXXMethod_isConst(cursor) != 0),
+                                    false))
+                            CxxMethodKind.InstanceMember
+                        }
+                    else -> CxxMethodKind.None.also {assert(false) { "Unexpected cursor.kind ${clang_getCursorKindSpelling(cursor.kind).convertAndDispose()}" }}
+                }
+        )
+        }
+
+        return FunctionDecl(name, parameters, returnType, binaryName, isDefined, isVararg, parents, cxxMethodInfo)
     }
 
     private fun getObjCMethod(cursor: CValue<CXCursor>): ObjCMethod? {

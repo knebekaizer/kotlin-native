@@ -276,6 +276,15 @@ fun Compilation.precompileHeaders(): CompilationWithPCH = withIndex { index ->
     }
 }
 
+// TODO Use clang_getCursorLanguage to get CXLanguageKind
+fun Compilation.isCPlusPlus(): Boolean {
+    compilerArgs.reduce args@{prev, that ->
+        if (prev == "-x" && that == "c++") return@isCPlusPlus true
+        return@args that
+    }
+    return false
+}
+
 internal fun Compilation.withPrecompiledHeader(translationUnit: CXTranslationUnit): CompilationWithPCH {
     val precompiledHeader = createTempFile(suffix = ".pch").apply { this.deleteOnExit() }
     clang_saveTranslationUnit(translationUnit, precompiledHeader.absolutePath, 0)

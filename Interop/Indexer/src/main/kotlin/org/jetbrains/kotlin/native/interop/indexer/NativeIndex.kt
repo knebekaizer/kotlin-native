@@ -156,9 +156,10 @@ abstract class StructDecl(val spelling: String) : TypeDeclaration {
 abstract class StructDef(val size: Long, val align: Int, val decl: StructDecl) {
 
     enum class Kind {
-        STRUCT, UNION
+        STRUCT, UNION, CLASS
     }
 
+    abstract val methods: List<FunctionDecl>
     abstract val members: List<StructMember>
     abstract val kind: Kind
 
@@ -224,11 +225,53 @@ abstract class ObjCCategory(val name: String, val clazz: ObjCClass) : ObjCContai
  */
 data class Parameter(val name: String?, val type: Type, val nsConsumed: Boolean)
 
+
+enum class CxxMethodKind {
+    None, // not supported yet?
+    Constructor,
+    Destructor,
+    StaticMember,
+    InstanceMember  // virtual or non-virtual instance member method (non-static)
+                    // do we need operators here?
+                    // do we need to distinguish virtual and non-virtual? Static? Final?
+}
+
+/**
+ * C++ class method, constructor or destructor details
+ */
+class CxxMethodInfo(val receiverType: PointerType, val kind: CxxMethodKind = CxxMethodKind.InstanceMember)
+
+fun CxxMethodInfo.isConst() : Boolean = receiverType.pointeeIsConst
+
+
 /**
  * C function declaration.
  */
 class FunctionDecl(val name: String, val parameters: List<Parameter>, val returnType: Type, val binaryName: String,
-                   val isDefined: Boolean, val isVararg: Boolean)
+                   val isDefined: Boolean, val isVararg: Boolean,
+                   val parents: List<String>? = null, val cxxMethod: CxxMethodInfo? = null)
+
+
+fun FunctionDecl.fullName() = parents?. let { (parents + name).joinToString("::") } ?: name
+
+/**
+ * C++ virtual or non-virtual instance member, i.e. has "this" receiver
+ */
+fun FunctionDecl.isCxxInstanceMember(): Boolean = this.cxxMethod != null  && this.cxxMethod.kind == CxxMethodKind.InstanceMember
+
+fun FunctionDecl.isCxxConstructor(): Boolean = this.cxxMethod != null  && this.cxxMethod.kind == CxxMethodKind.Constructor
+fun FunctionDecl.isCxxDestructor(): Boolean = this.cxxMethod != null  && this.cxxMethod.kind == CxxMethodKind.Destructor
+
+/**
+ * C++ class or instance member function, i.e. any function in the scope of class/struct: method, static, ctor, dtor, cast operator, etc
+ */
+fun FunctionDecl.isCxxMethod(): Boolean = this.cxxMethod != null
+        && this.cxxMethod.kind != CxxMethodKind.None // TODO remove additional check as it is just "not supported yet" workaround
+
+fun FunctionDecl.cxxReceiverType(): PointerType? = this.cxxMethod?.receiverType
+
+fun FunctionDecl.cxxReceiverClass(): StructDecl? = (this.cxxMethod?.receiverType?.pointeeType as RecordType).decl
+
 
 /**
  * C typedef definition.
@@ -276,7 +319,7 @@ data class RecordType(val decl: StructDecl) : Type
 
 data class EnumType(val def: EnumDef) : Type
 
-data class PointerType(val pointeeType: Type, val pointeeIsConst: Boolean = false) : Type
+data class PointerType(val pointeeType: Type, val pointeeIsConst: Boolean = false, val isLVReference: Boolean = false) : Type
 // TODO: refactor type representation and support type modifiers more generally.
 
 data class FunctionType(val parameterTypes: List<Type>, val returnType: Type) : Type

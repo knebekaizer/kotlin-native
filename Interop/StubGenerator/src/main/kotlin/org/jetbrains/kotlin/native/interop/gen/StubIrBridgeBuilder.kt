@@ -5,7 +5,7 @@
 package org.jetbrains.kotlin.native.interop.gen
 
 import org.jetbrains.kotlin.native.interop.gen.jvm.KotlinPlatform
-import org.jetbrains.kotlin.native.interop.indexer.ObjCProtocol
+import org.jetbrains.kotlin.native.interop.indexer.*
 import org.jetbrains.kotlin.utils.addToStdlib.firstIsInstanceOrNull
 
 class BridgeBuilderResult(
@@ -57,7 +57,8 @@ class StubIrBridgeBuilder(
                         override val mappingBridgeGenerator: MappingBridgeGenerator
                             get() = this@StubIrBridgeBuilder.mappingBridgeGenerator
                     },
-                    topLevelKotlinScope = kotlinFile
+                    topLevelKotlinScope = kotlinFile,
+                    isCPPContext = context.configuration.library.isCPlusPlus()
             )
 
     private val mappingBridgeGenerator: MappingBridgeGenerator =
@@ -235,6 +236,9 @@ class StubIrBridgeBuilder(
             isVararg = isVararg or parameter.isVararg
             val parameterName = parameter.name.asSimpleName()
             val bridgeArgument = when {
+                function.isCxxInstanceMember() && index == 0 -> {
+                    "rawPtr"
+                }
                 parameter in builderResult.bridgeGenerationComponents.cStringParameters -> {
                     bodyGenerator.pushMemScoped()
                     "$parameterName?.cstr?.getPointer(memScope)"
@@ -264,7 +268,19 @@ class StubIrBridgeBuilder(
                 bridgeArguments,
                 independent = false
         ) { nativeValues ->
-            "${origin.function.name}(${nativeValues.joinToString()})"
+            with (origin.function) {
+                when  {
+                    isCxxInstanceMember() ->
+                        "(${nativeValues[0]})->${name}(${nativeValues.drop(1).joinToString()})"
+                    isCxxConstructor() ->
+                        "new ${cxxReceiverClass()?.spelling}(${nativeValues.joinToString()})"
+                    isCxxDestructor() -> {
+                        "(${nativeValues[0]})->~${cxxReceiverClass()?.spelling?.substringAfterLast(':')}()"
+                    }
+                    else ->
+                        "${fullName()}(${nativeValues.joinToString()})"
+                }
+            }
         }
         bodyGenerator.returnResult(result)
         functionBridgeBodies[function] = bodyGenerator.build()

@@ -16,10 +16,7 @@
 
 package org.jetbrains.kotlin.native.interop.gen
 
-import org.jetbrains.kotlin.native.interop.indexer.RecordType
-import org.jetbrains.kotlin.native.interop.indexer.Type
-import org.jetbrains.kotlin.native.interop.indexer.VoidType
-import org.jetbrains.kotlin.native.interop.indexer.unwrapTypedefs
+import org.jetbrains.kotlin.native.interop.indexer.*
 
 /**
  * The [MappingBridgeGenerator] implementation which uses [SimpleBridgeGenerator] as the backend and
@@ -40,7 +37,12 @@ class MappingBridgeGeneratorImpl(
     ): KotlinExpression {
         val bridgeArguments = mutableListOf<BridgeTypedKotlinValue>()
 
-        kotlinValues.forEach { (type, value) ->
+        if (nativeBacked is FunctionStub && nativeBacked.isCxxInstanceMember()) {
+            bridgeArguments.add(BridgeTypedKotlinValue(BridgedType.NATIVE_PTR, "rawPtr"))
+            kotlinValues.drop(1)
+        } else {
+            kotlinValues
+        }.forEach { (type, value) ->
             if (type.unwrapTypedefs() is RecordType) {
                 builder.pushMemScoped()
                 val bridgeArgument = "$value.getPointer(memScope).rawValue"
@@ -78,9 +80,10 @@ class MappingBridgeGeneratorImpl(
             kotlinValues.forEachIndexed { index, (type, _) ->
                 val unwrappedType = type.unwrapTypedefs()
                 if (unwrappedType is RecordType) {
-                    nativeValues.add("*(${unwrappedType.decl.spelling}*)${bridgeNativeValues[index]}")
+                        nativeValues.add("*(${unwrappedType.decl.spelling}*)${bridgeNativeValues[index]}")
                 } else {
-                    nativeValues.add(
+                    val cppRefTypePrefix = if (unwrappedType is PointerType && unwrappedType.isLVReference) "*" else ""
+                    nativeValues.add( cppRefTypePrefix +
                             mirror(declarationMapper, type).info.cFromBridged(
                                     bridgeNativeValues[index], scope, nativeBacked
                             )
@@ -90,18 +93,20 @@ class MappingBridgeGeneratorImpl(
 
             val nativeResult = block(nativeValues)
 
-            when (unwrappedReturnType) {
-                is VoidType -> {
+            when {
+                unwrappedReturnType is VoidType -> {
                     out(nativeResult + ";")
                     ""
                 }
-                is RecordType -> {
+                unwrappedReturnType is RecordType -> {
                     val kniStructResult = "kniStructResult"
 
                     out("${unwrappedReturnType.decl.spelling} $kniStructResult = $nativeResult;")
                     out("memcpy(${bridgeNativeValues.last()}, &$kniStructResult, sizeof($kniStructResult));")
                     ""
                 }
+                unwrappedReturnType is PointerType && unwrappedReturnType.isLVReference ->
+                    "&$nativeResult"
                 else -> {
                     nativeResult
                 }
