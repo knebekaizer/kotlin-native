@@ -303,6 +303,7 @@ internal fun CXTranslationUnit.getErrorLineNumbers(): Sequence<Int> =
         getDiagnostics().filter {
             it.isError()
         }.map {
+            println(it.format)
             memScoped {
                 val lineNumberVar = alloc<IntVar>()
                 clang_getFileLocation(it.location, null, lineNumberVar.ptr, null, null)
