@@ -6,7 +6,7 @@ using namespace std;
 
 namespace ns {
 
-void NoName::noNameMember() {
+void NoName::noNameMember(const int& iRef) {
 	cout << __PRETTY_FUNCTION__ << " invoked" << endl;
 }
 
@@ -22,9 +22,7 @@ int CppTest::foo(const CppTest* x) {
 	return iPub + res;
 }
 
-CppTest::CppTest() : iPub(99) {}
-
-CppTest::CppTest(int i) : iPub(i) {}
+CppTest::CppTest(int i, double j) : iPub(i) {}
 
 /*
 CppTest::~CppTest() {
