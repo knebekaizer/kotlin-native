@@ -1,0 +1,5 @@
+headers = include/core/SkTime.h
+headerFilter = include/core/SkTime.h
+package = SkTime
+compilerOpts = -std=c++14
+compilerOpts = -x c++
