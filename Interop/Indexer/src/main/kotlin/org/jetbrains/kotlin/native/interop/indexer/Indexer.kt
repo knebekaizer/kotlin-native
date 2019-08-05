@@ -195,7 +195,8 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
     private fun getMethods(cursor: CValue<CXCursor>, receiver: StructDecl) : List<FunctionDecl> {
         val methods = mutableListOf<FunctionDecl>()
 
-        visitChildren(cursor) { cursor, parent ->
+        // TODO skip method (function) when encounter UnsupportedType in params or ret value. Otherwise all class methods will be lost due to exception (?)
+            visitChildren(cursor) { cursor, parent ->
             when (cursor.kind) {
 				CXCursorKind.CXCursor_CXXMethod -> {
 					val isOperatorFunction = (clang_getCursorSpelling(cursor).convertAndDispose().take(8) == "operator")
@@ -263,13 +264,7 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
 
         return true;
     }
-/*
-    private fun isRecursivelyPublic(cursor: CValue<CXCursor>) : Boolean = when (clang_getCXXAccessSpecifier(cursor)) {
-        // FIXME TODO
-        CX_CXXAccessSpecifier.CX_CXXPublic -> true
-        else -> false
-    }
-*/
+
     private fun addDeclaredFields(result: MutableList<StructMember>, structType: CValue<CXType>, containerType: CValue<CXType>) {
         getFields(containerType).filter { fieldCursor -> isRecursivelyPublic(fieldCursor) }.forEach { fieldCursor ->
             val name = getCursorSpelling(fieldCursor)
@@ -597,7 +592,7 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
             CXType_Record -> RecordType(getStructDeclAt(clang_getTypeDeclaration(type)))
             CXType_Enum -> EnumType(getEnumDefAt(clang_getTypeDeclaration(type)))
 
-            CXType_Pointer -> {
+            CXType_Pointer, CXType_LValueReference -> {
                 val pointeeType = clang_getPointeeType(type)
                 val pointeeIsConst =
                         (clang_isConstQualifiedType(clang_getCanonicalType(pointeeType)) != 0)
@@ -605,7 +600,8 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
                 val convertedPointeeType = convertType(pointeeType)
                 PointerType(
                         if (convertedPointeeType == UnsupportedType) VoidType else convertedPointeeType,
-                        pointeeIsConst = pointeeIsConst
+                        pointeeIsConst = pointeeIsConst,
+                        isLVReference = (kind == CXType_LValueReference)
                 )
             }
 
