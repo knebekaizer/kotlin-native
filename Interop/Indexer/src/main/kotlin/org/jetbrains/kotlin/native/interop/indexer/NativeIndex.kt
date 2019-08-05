@@ -260,11 +260,12 @@ fun FunctionDecl.fullName() = parents?. let { (parents + name).joinToString("::"
 fun FunctionDecl.isCxxInstanceMember(): Boolean = this.cxxMethod != null  && this.cxxMethod.kind == CxxMethodKind.InstanceMember
 
 fun FunctionDecl.isCxxConstructor(): Boolean = this.cxxMethod != null  && this.cxxMethod.kind == CxxMethodKind.Constructor
+fun FunctionDecl.isCxxDestructor(): Boolean = this.cxxMethod != null  && this.cxxMethod.kind == CxxMethodKind.Destructor
 
 /**
  * C++ class or instance member function, i.e. any function in the scope of class/struct: method, static, ctor, dtor, cast operator, etc
  */
-fun FunctionDecl.isCxxMember(): Boolean = this.cxxMethod != null
+fun FunctionDecl.isCxxMethod(): Boolean = this.cxxMethod != null
         && this.cxxMethod.kind != CxxMethodKind.None // TODO remove additional check as it is just "not supported yet" workaround
 
 fun FunctionDecl.cxxReceiverType(): PointerType? = this.cxxMethod?.receiverType
