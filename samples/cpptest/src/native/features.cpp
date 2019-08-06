@@ -65,3 +65,8 @@ CppTest* create() {
 	cout << __PRETTY_FUNCTION__ << " declared in ns2" << endl;
 	return nullptr;
 }
+
+void test() {
+	char buf[sizeof(ns::CppTest)];
+	ns::CppTest* x = new((ns::CppTest*)buf) ns::CppTest();
+}

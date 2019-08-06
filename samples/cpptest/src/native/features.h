@@ -25,6 +25,7 @@ public:
 //	int foo(const CppTest*);
 
     static int counter;
+    static int getCount() { return counter; }
 	template <class X> void fooTmplMember() const;
 private:
 //	CppTest* fct() const;
