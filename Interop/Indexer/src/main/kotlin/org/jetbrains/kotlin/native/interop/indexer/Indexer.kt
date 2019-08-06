@@ -973,14 +973,14 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
                 when (cursor.kind) {
                     CXCursorKind.CXCursor_Constructor -> {
                         returnType = PointerType(RecordType(receiver))
-                        name = "__create__" // Or do you prefer "__init__"? It does allocation however
+                        name = "__init__" // It is intended to init preallocated memory with placement new, so it is not "create" factory method. TODO One may want "create" method also.
+                        // Parameter type for placement new is void*, but I want to emphasize that memory block ahall have proper size and alignment
+                        parameters.add(0, Parameter("self", PointerType(RecordType(receiver)), false))
                         CxxMethodKind.Constructor
                     }
                     CXCursorKind.CXCursor_Destructor -> {
                         name = "__destroy__"
-                        parameters.add(0, Parameter("self",
-                                PointerType(RecordType(receiver), clang_CXXMethod_isConst(cursor) != 0),
-                                false))
+                        parameters.add(0, Parameter("self", PointerType(RecordType(receiver)), false))
                         CxxMethodKind.Destructor
                     }
                     // CXCursorKind.CXCursor_ConversionFunction -> ...

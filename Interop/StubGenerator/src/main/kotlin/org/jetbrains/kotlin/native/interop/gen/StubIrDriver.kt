@@ -25,6 +25,9 @@ class StubIrContext(
                 if (platform == KotlinPlatform.JVM) {
                     add("jni.h")
                 }
+                if (configuration.library.isCPlusPlus()) {
+                    add("new")
+                }
                 addAll(configuration.library.includes)
             },
             compilerArgs = configuration.library.compilerArgs,
