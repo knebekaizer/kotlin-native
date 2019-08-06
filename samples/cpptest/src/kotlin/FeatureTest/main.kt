@@ -10,22 +10,51 @@ import kotlin.test.*
 class FeatureTest {
 
     @Test fun ctorDefault() {
-        val x = ns__CppTest(ns__CppTest.__create__().rawValue)
-        assertEquals(42, x.iPub)
-        assertEquals(42, x.foo(null))
-        assertEquals(43, x.foo(x.ptr))
+        memScoped {
+            val x = alloc<ns__CppTest>()
+            ns__CppTest.__init__(x.ptr)
+            assertEquals(42, x.iPub)
+            assertEquals(42, x.foo(null))
+            assertEquals(43, x.foo(x.ptr))
+            // dtor is not called, leak is intentional for the purpose of UT
+        }
     }
 
     @Test fun ctorWithParam() {
-        val x = ns__CppTest(ns__CppTest.__create__(1001, 0.0).rawValue)
-        assertEquals(1001, x.iPub)
-        assertEquals(1001, x.foo(null))
-        assertEquals(1002, x.foo(x.ptr))
+        memScoped {
+            val x = alloc<ns__CppTest>()
+            ns__CppTest.__init__(x.ptr, 1001, 0.0)
+            assertEquals(1001, x.iPub)
+            assertEquals(1001, x.foo(null))
+            assertEquals(1002, x.foo(x.ptr))
+        }
     }
 
     @Test fun copyCtor(y: ns__CppTest) {
-        val x = ns__CppTest(ns__CppTest.__create__(y.ptr).rawValue)
+        val x = nativeHeap.alloc<ns__CppTest>() {}
+        ns__CppTest.__init__(x.ptr, y.ptr)
+
         assertEquals(y.iPub, x.iPub)
+        nativeHeap.free(x)
+    }
+
+    @Test fun reinitWithCtorAndDtor(y: ns__CppTest) {
+        val count = ns__CppTest.getCount()
+        val x = nativeHeap.alloc<ns__CppTest>() {}
+        ns__CppTest.__init__(x.ptr, y.ptr)
+        assertEquals(ns__CppTest.getCount(), count + 1)
+        assertEquals(y.iPub, x.iPub)
+
+        ns__CppTest.__destroy__(x.ptr)
+        y.iPub = -11
+        assertEquals(y.iPub, -11)
+        ns__CppTest.__init__(x.ptr, y.ptr)
+        assertEquals(x.iPub, -11)
+
+        ns__CppTest.__destroy__(x.ptr)
+        assertEquals(ns__CppTest.getCount(), count)
+
+        nativeHeap.free(x)
     }
 
     @Test fun publicField(x : ns__CppTest) {
@@ -47,14 +76,17 @@ fun main() {
     a1.iPub = 112
     testRun.copyCtor(a1)
 
+//******************************
     println("*** UT passed ***")
+//******************************
+
     testStatic()
 
     test0()
     testCtor()
-    testCtor1()
+//    testCtor1()
 
-    testCtor2()
+//    testCtor2()
 //    testCtor3()
     test2()
 }
@@ -70,11 +102,10 @@ fun testCtor() {
     val cxx = nativeHeap.alloc<ns__CppTest>() {
         memcpy(ptr, ns__create(), typeOf<ns__CppTest>().size.convert()) // use placement new here
     }
-//    memcpy(cxx.ptr, ns__create(), typeOf<CppTest>().size.convert()) // use placement new here
     cxx.foo(null)
     nativeHeap.free(cxx)
 }
-
+/*
 fun testCtor1() {
     println("testCtor1: interpretPointed<ns__CppTest>(ns__CppTest.__create__().rawValue)")
     val theStruct = interpretPointed<ns__CppTest>(ns__CppTest.__create__().rawValue)
@@ -99,7 +130,7 @@ fun testCtor2() {
     xs.foo(null)
     xs.foo(xs.ptr)
 }
-/*
+
 fun testCtor3() {
     println("testCtor3: MyStruct()")
     val xs = MyStruct()
