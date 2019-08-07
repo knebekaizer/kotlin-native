@@ -844,10 +844,7 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
             }
 
             CXIdxEntity_CXXClass -> {
-            //    if (clang_getCursorType(cursor).kind == CXCursorKind.CXCursor_ClassDecl) {
-                    // c++ templates are not supported yet
-                    getStructDeclAt(cursor)
-            //    }
+                getStructDeclAt(cursor)
             }
 
             CXIdxEntity_Typedef -> {
@@ -1000,14 +997,14 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
                     // CXCursorKind.CXCursor_ConversionFunction -> ...
                     CXCursorKind.CXCursor_CXXMethod ->
                         if (clang_CXXMethod_isStatic(cursor) != 0) {
-                            CxxMethodKind.StaticMember
+                            CxxMethodKind.StaticMethod
                         } else {
                             parameters.add(0, Parameter("self",
                                     PointerType(RecordType(receiver), clang_CXXMethod_isConst(cursor) != 0),
                                     false))
-                            CxxMethodKind.InstanceMember
+                            CxxMethodKind.InstanceMethod
                         }
-                    else -> CxxMethodKind.None.also {assert(false) { "Unexpected cursor.kind ${clang_getCursorKindSpelling(cursor.kind).convertAndDispose()}" }}
+                    else -> CxxMethodKind.None // Not implemented. Not expected, OK to assert (?)
                 }
         )
         }

@@ -265,20 +265,19 @@ class StubIrBridgeBuilder(
                 bodyGenerator,
                 function,
                 origin.function.returnType,
-                origin.function.cxxReceiverType(), // TODO Parameter is redundunt: use nativeBacked as FunctionStub instead
                 bridgeArguments,
                 independent = false
         ) { nativeValues ->
             with (origin.function) {
                 when  {
-                    isCxxInstanceMember() ->
+                    isCxxInstanceMethod ->
                         "(${nativeValues[0]})->${name}(${nativeValues.drop(1).joinToString()})"
-                    isCxxConstructor() ->
-                        "new(${nativeValues[0]}) ${cxxReceiverClass()?.spelling}(${nativeValues.drop(1).joinToString()})"
-                    isCxxDestructor() ->
-                        "(${nativeValues[0]})->~${cxxReceiverClass()?.spelling?.substringAfterLast(':')}()"
+                    isCxxConstructor ->
+                        "new(${nativeValues[0]}) ${cxxReceiverClass!!.spelling}(${nativeValues.drop(1).joinToString()})"
+                    isCxxDestructor ->
+                        "(${nativeValues[0]})->~${cxxReceiverClass!!.spelling?.substringAfterLast(':')}()"
                     else ->
-                        "${fullName()}(${nativeValues.joinToString()})"
+                        "${fullName}(${nativeValues.joinToString()})"
                 }
             }
         }

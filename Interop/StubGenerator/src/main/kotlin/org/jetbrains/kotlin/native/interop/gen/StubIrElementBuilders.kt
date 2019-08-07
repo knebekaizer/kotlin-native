@@ -67,7 +67,7 @@ internal class StructStubBuilder(
 
         var methods: List<FunctionStub> =
             def.methods
-                    .filter { it.isCxxInstanceMember() }
+                    .filter { it.isCxxInstanceMethod }
                     .map { func -> (FunctionStubBuilder(context, func).build() as List<FunctionStub>).single()}
 
         val fields: List<PropertyStub?> = def.fields.map { field ->
@@ -133,7 +133,7 @@ internal class StructStubBuilder(
 
         var classMethods: List<FunctionStub> =
                 def.methods
-                        .filter { !it.isCxxInstanceMember() }
+                        .filter { !it.isCxxInstanceMethod }
                         .map { func -> (FunctionStubBuilder(context, func).build() as List<FunctionStub>).single() }
         val classFields = def.staticFields
                 .map { field -> (GlobalStubBuilder(context, field).build() as List<PropertyStub>).single() }

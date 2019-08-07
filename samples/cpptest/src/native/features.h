@@ -18,6 +18,7 @@ public:
 
 	~CppTest();
 
+	operator NoName() const;
 
 	int iPub = 42;
 

@@ -305,7 +305,6 @@ sealed class TypeInfo {
                         codeBuilder,
                         nativeBacked,
                         type.returnType,
-                        null,
                         type.parameterTypes.mapIndexed { index, it ->
                             TypedKotlinValue(it, "p$index")
                         } + TypedKotlinValue(PointerType(VoidType), "interpretCPointer<COpaque>($kniBlockPtr)"),

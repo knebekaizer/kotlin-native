@@ -231,8 +231,8 @@ enum class CxxMethodKind {
     None, // not supported yet?
     Constructor,
     Destructor,
-    StaticMember,
-    InstanceMember  // virtual or non-virtual instance member method (non-static)
+    StaticMethod,
+    InstanceMethod  // virtual or non-virtual instance member method (non-static)
                     // do we need operators here?
                     // do we need to distinguish virtual and non-virtual? Static? Final?
 }
@@ -240,7 +240,7 @@ enum class CxxMethodKind {
 /**
  * C++ class method, constructor or destructor details
  */
-class CxxMethodInfo(val receiverType: PointerType, val kind: CxxMethodKind = CxxMethodKind.InstanceMember)
+class CxxMethodInfo(val receiverType: PointerType, val kind: CxxMethodKind = CxxMethodKind.InstanceMethod)
 
 fun CxxMethodInfo.isConst() : Boolean = receiverType.pointeeIsConst
 
@@ -250,28 +250,27 @@ fun CxxMethodInfo.isConst() : Boolean = receiverType.pointeeIsConst
  */
 class FunctionDecl(val name: String, val parameters: List<Parameter>, val returnType: Type, val binaryName: String,
                    val isDefined: Boolean, val isVararg: Boolean,
-                   val parents: List<String>? = null, val cxxMethod: CxxMethodInfo? = null)
+                   val parents: List<String>? = null, val cxxMethod: CxxMethodInfo? = null) {
+
+    val fullName: String = parents?.let { (parents + name).joinToString("::") } ?: name
+
+    // C++ virtual or non-virtual instance member, i.e. has "this" receiver
+    val isCxxInstanceMethod: Boolean = cxxMethod != null  && cxxMethod.kind == CxxMethodKind.InstanceMethod
+
+    /**
+     * C++ class or instance member function, i.e. any function in the scope of class/struct: method, static, ctor, dtor, cast operator, etc
+     */
+    val isCxxMethod: Boolean = cxxMethod != null
+            && this.cxxMethod.kind != CxxMethodKind.None
+
+    val isCxxConstructor: Boolean = cxxMethod != null  && this.cxxMethod.kind == CxxMethodKind.Constructor
+    val isCxxDestructor: Boolean = cxxMethod != null  && this.cxxMethod.kind == CxxMethodKind.Destructor
+    val cxxReceiverType: PointerType? = cxxMethod?.receiverType
+    val cxxReceiverClass: StructDecl? = cxxMethod?. let { (this.cxxMethod.receiverType.pointeeType as RecordType).decl }
+}
 
 
-fun FunctionDecl.fullName() = parents?. let { (parents + name).joinToString("::") } ?: name
 
-/**
- * C++ virtual or non-virtual instance member, i.e. has "this" receiver
- */
-fun FunctionDecl.isCxxInstanceMember(): Boolean = this.cxxMethod != null  && this.cxxMethod.kind == CxxMethodKind.InstanceMember
-
-fun FunctionDecl.isCxxConstructor(): Boolean = this.cxxMethod != null  && this.cxxMethod.kind == CxxMethodKind.Constructor
-fun FunctionDecl.isCxxDestructor(): Boolean = this.cxxMethod != null  && this.cxxMethod.kind == CxxMethodKind.Destructor
-
-/**
- * C++ class or instance member function, i.e. any function in the scope of class/struct: method, static, ctor, dtor, cast operator, etc
- */
-fun FunctionDecl.isCxxMethod(): Boolean = this.cxxMethod != null
-        && this.cxxMethod.kind != CxxMethodKind.None // TODO remove additional check as it is just "not supported yet" workaround
-
-fun FunctionDecl.cxxReceiverType(): PointerType? = this.cxxMethod?.receiverType
-
-fun FunctionDecl.cxxReceiverClass(): StructDecl? = (this.cxxMethod?.receiverType?.pointeeType as RecordType).decl
 
 
 /**
@@ -293,8 +292,7 @@ class StringConstantDef(name: String, type: Type, val value: String) : ConstantD
 class WrappedMacroDef(name: String, val type: Type) : MacroDef(name)
 
 class GlobalDecl(val name: String, val type: Type, val isConst: Boolean, val parentName: String? = null) {
-    val fullName: String
-        get() = parentName?.let { "$it::$name" } ?: name
+    val fullName: String = parentName?.let { "$it::$name" } ?: name
 }
 
 /**
