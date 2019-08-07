@@ -25,6 +25,10 @@ public:
 //	int foo(const CppTest*);
 
     static int counter;
+
+    static NoName compStaticField;
+    NoName compField;
+
     static int getCount() { return counter; }
 	template <class X> void fooTmplMember() const;
 private:

@@ -33,6 +33,7 @@ private class StructDefImpl(
 ) {
     override val members = mutableListOf<StructMember>()
     override val methods = mutableListOf<FunctionDecl>()
+    override val staticFields = mutableListOf<GlobalDecl>()
 }
 
 private class EnumDefImpl(spelling: String, type: Type, override val location: Location) : EnumDef(spelling, type) {
@@ -192,28 +193,41 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
         return StructDeclImpl(typeSpelling, getLocation(cursor))
     }
 
-    private fun getMethods(cursor: CValue<CXCursor>, receiver: StructDecl) : List<FunctionDecl> {
-        val methods = mutableListOf<FunctionDecl>()
+    private fun visitClass(cursor: CValue<CXCursor>, clazz: StructDefImpl)  {
 
         // TODO skip method (function) when encounter UnsupportedType in params or ret value. Otherwise all class methods will be lost due to exception (?)
-            visitChildren(cursor) { cursor, parent ->
-            when (cursor.kind) {
-				CXCursorKind.CXCursor_CXXMethod -> {
-					val isOperatorFunction = (clang_getCursorSpelling(cursor).convertAndDispose().take(8) == "operator")
-					// operators are Not Implemented Yet
-					if (!isOperatorFunction) { 
-	                	methods.add(getFunction(cursor, receiver))
-					}
-				}
-				CXCursorKind.CXCursor_Constructor -> 
-					methods.add(getFunction(cursor, receiver)) // methods.add(getCxxConstructor(cursor, receiver))
-			 	CXCursorKind.CXCursor_Destructor ->
-					methods.add(getFunction(cursor, receiver)) // methods.add(getCxxDenstructor(cursor, receiver))
+        visitChildren(cursor) { cursor, parent ->
+            if (clang_getCXXAccessSpecifier(cursor) == CX_CXXAccessSpecifier.CX_CXXPublic) {
+                // TODO If a kotlin class is _conceptually_ derived from its c++ counterpart, then it shall be able to override virtual private and access protected
+                when (cursor.kind) {
+                    CXCursorKind.CXCursor_CXXMethod -> {
+                        val isOperatorFunction = (clang_getCursorSpelling(cursor).convertAndDispose().take(8) == "operator")
+                        // operators are Not Implemented Yet
+                        if (!isOperatorFunction) {
+                            clazz.methods.add(getFunction(cursor, clazz.decl))
+                        }
+                    }
+                    CXCursorKind.CXCursor_Constructor ->
+                        clazz.methods.add(getFunction(cursor, clazz.decl)) // methods.add(getCxxConstructor(cursor, receiver))
+                    CXCursorKind.CXCursor_Destructor ->
+                        clazz.methods.add(getFunction(cursor, clazz.decl)) // methods.add(getCxxDenstructor(cursor, receiver))
+
+                    CXCursorKind.CXCursor_VarDecl -> {
+                        clazz.staticFields.add(GlobalDecl(
+                                name =getCursorSpelling(cursor),
+                                type = convertCursorType(cursor),
+                                isConst = clang_isConstQualifiedType(clang_getCursorType(cursor)) != 0,
+                                parentName = clazz.decl.spelling)
+                        )
+                    }
+
+                    else ->
+                        println("${clazz.decl.spelling}::${clang_getCursorSpelling(cursor).convertAndDispose()} of ${clang_getCursorKindSpelling(cursor.kind).convertAndDispose()}")
+                }
             }
             CXChildVisitResult.CXChildVisit_Continue
         }
-        methods.forEach { println("CxxMethod: ${receiver.spelling}::${it.name}") }
-        return methods
+        clazz.methods.forEach { println("CxxMethod: ${clazz.decl.spelling}::${it.name}") }
     }
 
     private fun createStructDef(structDecl: StructDeclImpl, cursor: CValue<CXCursor>) {
@@ -236,7 +250,7 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
         )
 
         structDef.members += fields
-        structDef.methods += getMethods(cursor, structDecl)
+        visitClass(cursor, structDef)
 
         structDecl.def = structDef
     }

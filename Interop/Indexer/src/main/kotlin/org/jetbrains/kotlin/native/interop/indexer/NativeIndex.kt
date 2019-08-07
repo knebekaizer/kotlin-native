@@ -161,6 +161,7 @@ abstract class StructDef(val size: Long, val align: Int, val decl: StructDecl) {
 
     abstract val methods: List<FunctionDecl>
     abstract val members: List<StructMember>
+    abstract val staticFields: List<GlobalDecl>
     abstract val kind: Kind
 
     val fields: List<Field> get() = members.filterIsInstance<Field>()
@@ -291,7 +292,10 @@ class StringConstantDef(name: String, type: Type, val value: String) : ConstantD
 
 class WrappedMacroDef(name: String, val type: Type) : MacroDef(name)
 
-class GlobalDecl(val name: String, val type: Type, val isConst: Boolean)
+class GlobalDecl(val name: String, val type: Type, val isConst: Boolean, val parentName: String? = null) {
+    val fullName: String
+        get() = parentName?.let { "$it::$name" } ?: name
+}
 
 /**
  * C type.
