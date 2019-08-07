@@ -62,6 +62,18 @@ class FeatureTest {
         assertEquals(22, x.foo(x.ptr))
     }
 
+    @Test fun staticField() {
+        val save = ns__CppTest.getCount()
+        assertEquals(ns__CppTest.getCount(), ns__CppTest.counter)
+
+        ns__CppTest.counter = 654
+        assertEquals(ns__CppTest.getCount(), 654)
+        assertEquals(ns__CppTest.getCount(), ns__CppTest.counter)
+
+        ns__CppTest.counter = save
+        assertEquals(ns__CppTest.getCount(), save)
+    }
+
 }
 
 fun main() {
@@ -72,9 +84,11 @@ fun main() {
 
     val a1 = interpretPointed<ns__CppTest>(ns__create().rawValue)
     testRun.publicField(a1)
+//    testRun.staticField(a1)
 
     a1.iPub = 112
     testRun.copyCtor(a1)
+    testRun.reinitWithCtorAndDtor(a1)
 
 //******************************
     println("*** UT passed ***")

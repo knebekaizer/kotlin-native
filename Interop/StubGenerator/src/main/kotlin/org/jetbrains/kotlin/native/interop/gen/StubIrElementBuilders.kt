@@ -134,8 +134,11 @@ internal class StructStubBuilder(
         var classMethods: List<FunctionStub> =
                 def.methods
                         .filter { !it.isCxxInstanceMember() }
-                        .map { func -> (FunctionStubBuilder(context, func).build() as List<FunctionStub>)[0]}
+                        .map { func -> (FunctionStubBuilder(context, func).build() as List<FunctionStub>).single() }
+        val classFields = def.staticFields
+                .map { field -> (GlobalStubBuilder(context, field).build() as List<PropertyStub>).single() }
         val companion = ClassStub.Companion(companionSuperInit,
+                properties = classFields,
                 functions = classMethods)
 
         return listOf(ClassStub.Simple(
@@ -451,7 +454,7 @@ internal class GlobalStubBuilder(
         if (unwrappedType is ArrayType) {
             kotlinType = (mirror as TypeMirror.ByValue).valueType
             val getter = PropertyAccessor.Getter.SimpleGetter()
-            val extra = BridgeGenerationComponents.GlobalGetterBridgeInfo(global.name, mirror.info, isArray = true)
+            val extra = BridgeGenerationComponents.GlobalGetterBridgeInfo(global.fullName, mirror.info, isArray = true)
             context.bridgeComponentsBuilder.getterToBridgeInfo[getter] = extra
             kind = PropertyStub.Kind.Val(getter)
         } else {
@@ -459,20 +462,20 @@ internal class GlobalStubBuilder(
                 is TypeMirror.ByValue -> {
                     kotlinType = mirror.argType
                     val getter = PropertyAccessor.Getter.SimpleGetter()
-                    val getterExtra = BridgeGenerationComponents.GlobalGetterBridgeInfo(global.name, mirror.info, isArray = false)
+                    val getterExtra = BridgeGenerationComponents.GlobalGetterBridgeInfo(global.fullName, mirror.info, isArray = false)
                     context.bridgeComponentsBuilder.getterToBridgeInfo[getter] = getterExtra
                     kind = if (global.isConst) {
                         PropertyStub.Kind.Val(getter)
                     } else {
                         val setter = PropertyAccessor.Setter.SimpleSetter()
-                        val setterExtra = BridgeGenerationComponents.GlobalSetterBridgeInfo(global.name, mirror.info)
+                        val setterExtra = BridgeGenerationComponents.GlobalSetterBridgeInfo(global.fullName, mirror.info)
                         context.bridgeComponentsBuilder.setterToBridgeInfo[setter] = setterExtra
                         PropertyStub.Kind.Var(getter, setter)
                     }
                 }
                 is TypeMirror.ByRef -> {
                     kotlinType = mirror.pointedType
-                    val getter = PropertyAccessor.Getter.InterpretPointed(global.name, WrapperStubType(kotlinType))
+                    val getter = PropertyAccessor.Getter.InterpretPointed(global.fullName, WrapperStubType(kotlinType))
                     kind = PropertyStub.Kind.Val(getter)
                 }
             }
