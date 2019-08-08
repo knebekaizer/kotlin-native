@@ -3,8 +3,7 @@ namespace ns {
 
 typedef class {
 public:
-	int noNameMember(int& iRef);
-//	int noNameMember(const int& iRef);
+	void noNameMember(const int& iRef);
 } NoName;
 
 class CppTest {
@@ -24,7 +23,8 @@ public:
 	int iPub = 42;
 
 	virtual int foo(const CppTest*);
-//  virtual int foo(const CppTest*) const;
+	virtual int foo(const CppTest*) const;
+//	int foo(const CppTest*);
 
     static int counter;
 
@@ -33,6 +33,14 @@ public:
 
     static int getCount() { return counter; }
 	template <class X> void fooTmplMember() const;
+
+	struct {
+		int inner_FieldOfNonameStruct;
+	};
+
+	struct Inner{
+		int inner_FieldOfInnerStruct;
+	} inner;
 private:
 //	CppTest* fct() const;
 

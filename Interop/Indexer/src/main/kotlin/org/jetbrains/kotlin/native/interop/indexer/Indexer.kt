@@ -221,13 +221,13 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
                         )
                     }
 
-                    else ->
-                        println("${clazz.decl.spelling}::${clang_getCursorSpelling(cursor).convertAndDispose()} of ${clang_getCursorKindSpelling(cursor.kind).convertAndDispose()}")
+                    else -> {
+                        // TODO
+                    }
                 }
             }
             CXChildVisitResult.CXChildVisit_Continue
         }
-        clazz.methods.forEach { println("CxxMethod: ${clazz.decl.spelling}::${it.name}") }
     }
 
     private fun createStructDef(structDecl: StructDeclImpl, cursor: CValue<CXCursor>) {
@@ -814,9 +814,6 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
         val entityInfo = info.entityInfo!!.pointed
         val entityName = entityInfo.name?.toKString()
         val kind = entityInfo.kind
-        val k = clang_getCursorType(cursor).kind
-        val kk = clang_getCursorKind(cursor)
-//        println("indexDeclaration> $entityName ${clang_getTypeKindSpelling(k).convertAndDispose()} ${clang_getCursorKindSpelling(kk).convertAndDispose()}")
 
         if (!this.library.includesDeclaration(cursor)) {
             return
