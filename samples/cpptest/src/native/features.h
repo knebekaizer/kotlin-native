@@ -3,7 +3,8 @@ namespace ns {
 
 typedef class {
 public:
-	void noNameMember(const int& iRef);
+	int noNameMember(int& iRef);
+//	int noNameMember(const int& iRef);
 } NoName;
 
 class CppTest {
@@ -23,7 +24,7 @@ public:
 	int iPub = 42;
 
 	virtual int foo(const CppTest*);
-//	int foo(const CppTest*);
+//  virtual int foo(const CppTest*) const;
 
     static int counter;
 
