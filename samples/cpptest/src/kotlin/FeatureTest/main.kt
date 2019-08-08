@@ -62,6 +62,17 @@ class FeatureTest {
         assertEquals(22, x.foo(x.ptr))
     }
 
+    @Test fun lvRefParameter() {
+        memScoped {
+            val x = alloc<ns__NoName>()
+            var i = alloc<IntVar>()
+            i.value = 758
+            assertEquals(x.noNameMember(i.ptr), 759)
+            assertEquals(i.value, 759)
+        }
+
+    }
+
     @Test fun staticField() {
         val save = ns__CppTest.getCount()
         assertEquals(ns__CppTest.getCount(), ns__CppTest.counter)
@@ -84,11 +95,15 @@ fun main() {
 
     val a1 = interpretPointed<ns__CppTest>(ns__create().rawValue)
     testRun.publicField(a1)
-//    testRun.staticField(a1)
+
+    testRun.staticField()
+
+    testRun.lvRefParameter()
 
     a1.iPub = 112
     testRun.copyCtor(a1)
     testRun.reinitWithCtorAndDtor(a1)
+
 
 //******************************
     println("*** UT passed ***")
@@ -96,7 +111,6 @@ fun main() {
 
     testStatic()
 
-    test0()
     testCtor()
 //    testCtor1()
 
@@ -151,12 +165,6 @@ fun testCtor3() {
     xs.foo()
 }
 */
-fun test0() {
-    memScoped {
-        val aStruct = alloc<ns__NoName>()
-        aStruct.noNameMember(null) // this must be an error
-    }
-}
 
 fun test2() {
     println("test2")

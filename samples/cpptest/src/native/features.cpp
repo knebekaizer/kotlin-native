@@ -6,8 +6,9 @@ using namespace std;
 
 namespace ns {
 
-void NoName::noNameMember(const int& iRef) {
+int NoName::noNameMember(int& iRef) {
 	cout << __PRETTY_FUNCTION__ << " invoked" << endl;
+	return ++iRef;
 }
 
 int CppTest::counter;
