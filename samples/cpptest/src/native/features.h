@@ -1,4 +1,7 @@
 
+int plainCFreeFunction();
+static inline void plainCInternalFunction();  // [Conceptual] should be mapped as internal fun or not eligible for binding at all
+
 namespace ns {
 
 typedef class {

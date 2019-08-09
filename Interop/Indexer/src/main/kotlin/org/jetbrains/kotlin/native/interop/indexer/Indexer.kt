@@ -193,11 +193,17 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
         return StructDeclImpl(typeSpelling, getLocation(cursor))
     }
 
+    // TODO this should not be a Indexer class method: either free function, or CXCursor extension
+    private fun isPublic(cursor: CValue<CXCursor>): Boolean {
+        val access = clang_getCXXAccessSpecifier(cursor)
+        return access != CX_CXXAccessSpecifier.CX_CXXProtected && access != CX_CXXAccessSpecifier.CX_CXXPrivate
+    }
+
     private fun visitClass(cursor: CValue<CXCursor>, clazz: StructDefImpl)  {
 
         // TODO skip method (function) when encounter UnsupportedType in params or ret value. Otherwise all class methods will be lost due to exception (?)
-        visitChildren(cursor) { cursor, parent ->
-            if (clang_getCXXAccessSpecifier(cursor) == CX_CXXAccessSpecifier.CX_CXXPublic) {
+        visitChildren(cursor) { cursor, _ ->
+            if (isPublic(cursor)) {
                 // TODO If a kotlin class is _conceptually_ derived from its c++ counterpart, then it shall be able to override virtual private and access protected
                 when (cursor.kind) {
                     CXCursorKind.CXCursor_CXXMethod -> {
@@ -255,32 +261,8 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
         structDecl.def = structDef
     }
 
-    private fun isRecursivelyPublic(c: CValue<CXCursor>) : Boolean {
-        var cursor = c
-        while (clang_isDeclaration(clang_getCursorKind(cursor)) != 0) {
-            val access = clang_getCXXAccessSpecifier(cursor);
-            if (access == CX_CXXAccessSpecifier.CX_CXXPrivate || access == CX_CXXAccessSpecifier.CX_CXXProtected) {
-                return false;
-            }
-
-            if (clang_getCursorLinkage(cursor) == CXLinkageKind.CXLinkage_Internal) {
-                return false;
-            }
-
-            if (clang_getCursorKind(cursor) == CXCursorKind.CXCursor_Namespace
-                    && clang_getCursorSpelling(cursor).convertAndDispose().isEmpty()) {
-                // Anonymous namespace.
-                return false;
-            }
-
-            cursor = clang_getCursorSemanticParent(cursor);
-        }
-
-        return true;
-    }
-
     private fun addDeclaredFields(result: MutableList<StructMember>, structType: CValue<CXType>, containerType: CValue<CXType>) {
-        getFields(containerType).filter { fieldCursor -> isRecursivelyPublic(fieldCursor) }.forEach { fieldCursor ->
+        getFields(containerType).filter { isPublic(it) }.forEach { fieldCursor ->
             val name = getCursorSpelling(fieldCursor)
             if (name.isNotEmpty()) {
                 val fieldType = convertCursorType(fieldCursor)
@@ -565,7 +547,6 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
     }
 
     fun convertType(type: CValue<CXType>, typeAttributes: CValue<CXTypeAttributes>? = null): Type {
-        val spelling = clang_getTypeSpelling(type).convertAndDispose()
         val primitiveType = convertUnqualifiedPrimitiveType(type)
         if (primitiveType != UnsupportedType) {
             return primitiveType
@@ -814,16 +795,8 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
         val entityInfo = info.entityInfo!!.pointed
         val entityName = entityInfo.name?.toKString()
         val kind = entityInfo.kind
-        val k = clang_getCursorType(cursor).kind
-        val kk = clang_getCursorKind(cursor)
-//        println("indexDeclaration> $entityName ${clang_getTypeKindSpelling(k).convertAndDispose()} ${clang_getCursorKindSpelling(kk).convertAndDispose()}")
 
         if (!this.library.includesDeclaration(cursor)) {
-            return
-        }
-
-        if (!isRecursivelyPublic(cursor)) {
-            // c++ : skip anon namespaces, static functions and variables and private inner classes
             return
         }
 
@@ -853,10 +826,7 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
             }
 
             CXIdxEntity_Function -> {
-                if (isSuitableFunction(cursor)
-                        // function templates are not supported yet
-                         && clang_getCursorType(cursor).kind != CXCursorKind.CXCursor_FunctionTemplate // does not work
-                ) {
+                if (isSuitableFunction(cursor)) {
                     functionById.getOrPut(getDeclarationId(cursor)) {
                         getFunction(cursor)
                     }
