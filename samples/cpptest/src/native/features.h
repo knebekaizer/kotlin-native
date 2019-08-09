@@ -27,6 +27,7 @@ struct ForwardT {}; // definition
 ForwardT* cFunForwardParams(const ForwardT*) { // def
 	return new ForwardT();
 }
+
 namespace ns {
 namespace {
 	void funInInnerAnonNS();
@@ -35,6 +36,10 @@ namespace {
 namespace NestedNS {
 	int funInNestedNS();
 	int g_inNestedNS;
+}
+
+namespace {
+	void funInInnerAnonNS();
 }
 
 typedef class {
@@ -72,10 +77,12 @@ public:
 
     static int getCount() { return counter; }
 	template <class X> void fooTmplMember() const;
+
 	class Nested {
 	public:
 		int nestedFoo();
 	};
+
 private:
 	CppTest* funPrivate() const;
 	static int s_funPrivate();
@@ -92,7 +99,6 @@ CppTest* create();
 
 namespace {
 ns::CppTest* fooInAnonNamespace();
-
 }
 
 class CppTest;
@@ -106,7 +112,6 @@ template <typename T> struct TmplStruct {
 public:
 	void baz() const {}
 };
-
 /*
 template <typename T> class TmplClass {
 public:

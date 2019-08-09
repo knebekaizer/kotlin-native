@@ -790,6 +790,13 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
         val entityName = entityInfo.name?.toKString()
         val kind = entityInfo.kind
 
+val lang = clang_getCursorLanguage(cursor)
+val nameS = getCursorSpelling(cursor)
+val type = clang_getCursorType(cursor)
+val typeS = clang_getTypeSpelling(type).convertAndDispose()
+val kindS = clang_getTypeKindSpelling(type.kind).convertAndDispose()
+println("indexDeclaration> lang = $lang [${clang_getCursorKindSpelling(cursor.kind).convertAndDispose()}] $nameS : $typeS.$kindS")
+
         if (!this.library.includesDeclaration(cursor)) {
             return
         }
@@ -1096,7 +1103,31 @@ private fun indexDeclarations(nativeIndex: NativeIndexImpl): CompilationWithPCH 
                 }
             })
 
+            val rootCursor = clang_getTranslationUnitCursor(translationUnit)
             visitChildren(clang_getTranslationUnitCursor(translationUnit)) { cursor, _ ->
+                val file = getContainingFile(cursor)
+                if (file in headers && nativeIndex.library.includesDeclaration(cursor)) {
+                    val lang = clang_getCursorLanguage(cursor)
+                    val nameS = getCursorSpelling(cursor)
+                    val type = clang_getCursorType(cursor)
+                    val typeS = clang_getTypeSpelling(type).convertAndDispose()
+                    val kindS = clang_getTypeKindSpelling(type.kind).convertAndDispose()
+                    val definitionCursor = clang_getCursorDefinition(cursor)
+                    val theSame = clang_equalCursors(cursor, definitionCursor)
+                    val isDefNotNull = (clang_Cursor_isNull(definitionCursor) == 0)
+                    val isDefCursor = clang_isCursorDefinition(cursor)
+
+                //    println("visitTypes> lang = $lang [${clang_getCursorKindSpelling(cursor.kind).convertAndDispose()}] $nameS : $typeS.$kindS \tCursor(isDef=$isDefCursor, hasDef=$isDefNotNull, theSame=$theSame")
+                    println("visitTypes> [${clang_getCursorKindSpelling(cursor.kind).convertAndDispose()}] \t $nameS : $typeS.$kindS \tCursor(isDef=$isDefCursor, hasDef=$isDefNotNull, theSame=$theSame")
+                    when (cursor.kind) {
+                        else -> {
+                        }
+                    }
+                }
+                CXChildVisitResult.CXChildVisit_Recurse
+            }
+
+                visitChildren(clang_getTranslationUnitCursor(translationUnit)) { cursor, _ ->
                 val file = getContainingFile(cursor)
                 if (file in headers && nativeIndex.library.includesDeclaration(cursor)) {
                     when (cursor.kind) {
