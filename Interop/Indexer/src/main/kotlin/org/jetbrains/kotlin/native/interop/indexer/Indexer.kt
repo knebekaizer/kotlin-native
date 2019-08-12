@@ -906,7 +906,7 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
         }
     }
 
-    private fun getParentNames(cursor: CValue<CXCursor>) : List<String>? {
+    private fun getParentName(cursor: CValue<CXCursor>, pkg: List<String> = emptyList()) : String? { // }: List<String>? {
         // This doesn't work for anonymous C++ struct (such as typedef struct { void foo(); } TypeDefName)  as well as anon namespace
         // In contrast, clang_getTypeSpelling return fully qualified name for struct & class (incl. typedef anon struct),
         // but does not help for anything elde such as template member, namespace etc
@@ -915,17 +915,17 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
         // while function is accessible as x.foo()
 
         // skip this (zero) level:
-        assert (clang_isDeclaration(cursor.kind) != 0)
 
-        var cur = clang_getCursorSemanticParent(cursor)
+        var parent = clang_getCursorSemanticParent(cursor)
+        if (clang_isDeclaration(parent.kind) == 0)
+            return if (pkg.isNotEmpty()) pkg.joinToString("::") else null
 
-        val parents = mutableListOf<String>()
-        while (clang_isDeclaration(cur.kind) != 0) {
-            parents.add(0, clang_getCursorSpelling(cur).convertAndDispose())
-            // parents.add(0, clang_getTypeSpelling(clang_getCursorType(cur)).convertAndDispose()) // this is not perfect too
-            cur = clang_getCursorSemanticParent(cur)
-        }
-        return if (parents.isNotEmpty()) parents else null
+        val type = clang_getCursorType(parent)
+        if (type.kind == CXTypeKind.CXType_Record)
+            return clang_getTypeSpelling(type).convertAndDispose()
+
+        val name = getCursorSpelling(parent)
+        return getParentName(parent, listOf(name) + pkg)
     }
 
     private fun getFunction(cursor: CValue<CXCursor>, receiver: StructDecl? = null): FunctionDecl {
@@ -945,7 +945,7 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
         val isVararg = clang_Cursor_isVariadic(cursor) != 0
 
         // TODO Do the following if clang_getCursorLanguage(cursor) == CXLanguageKind.CXLanguage_CPlusPlus ...
-        val parents = getParentNames(cursor)
+        val parentName = getParentName(cursor)
         val cxxMethodInfo = receiver?.let { CxxMethodInfo(
                 PointerType(RecordType(receiver),
                         clang_CXXMethod_isConst(cursor) != 0), // CXCursor_ConversionFunction has constness too
@@ -977,7 +977,7 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
         )
         }
 
-        return FunctionDecl(name, parameters, returnType, binaryName, isDefined, isVararg, parents, cxxMethodInfo)
+        return FunctionDecl(name, parameters, returnType, binaryName, isDefined, isVararg, parentName, cxxMethodInfo)
     }
 
     private fun getObjCMethod(cursor: CValue<CXCursor>): ObjCMethod? {

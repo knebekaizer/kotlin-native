@@ -250,9 +250,9 @@ fun CxxMethodInfo.isConst() : Boolean = receiverType.pointeeIsConst
  */
 class FunctionDecl(val name: String, val parameters: List<Parameter>, val returnType: Type, val binaryName: String,
                    val isDefined: Boolean, val isVararg: Boolean,
-                   val parents: List<String>? = null, val cxxMethod: CxxMethodInfo? = null) {
+                   val parentName: String? = null, val cxxMethod: CxxMethodInfo? = null) {
 
-    val fullName: String = parents?.let { (parents + name).joinToString("::") } ?: name
+    val fullName: String = parentName?.let { "$parentName::$name" } ?: name
 
     // C++ virtual or non-virtual instance member, i.e. has "this" receiver
     val isCxxInstanceMethod: Boolean = cxxMethod != null  && cxxMethod.kind == CxxMethodKind.InstanceMethod
