@@ -2,6 +2,8 @@
 int plainCFreeFunction();
 static inline void plainCInternalFunction();  // [Conceptual] should be mapped as internal fun or not eligible for binding at all
 
+int g_Var;
+
 struct PlainCStruct {
 	int plainCField;
 	struct {
@@ -30,11 +32,18 @@ namespace {
 	void funInInnerAnonNS();
 }
 
+namespace NestedNS {
+	int funInNestedNS();
+	int g_inNestedNS;
+}
+
 typedef class {
 public:
 	int noNameMember(int& iRef);
-//	int noNameMember(const int& iRef);
-//	static int noNameStaticFun(); // won't work
+//	int noNameMember(const int& iRef);  need mangling
+	static int noNameStaticFun(); // won't work
+	int fieldInAnonClass;
+	// static int s_fieldInAnonClass; not legal C++
 } NoName;
 
 class CppTest {
