@@ -11,8 +11,13 @@ struct PlainCStruct {
 	};
 };
 
+typedef struct PlainCStruct PlainCStructT;
+
+using PlainCStructAlias = PlainCStruct;
+
 void wrappingFun() {
 	class NestedInFunction {
+		int varInLocalClass;
 	} var;  // local types shall be ignored
 }
 
@@ -28,14 +33,33 @@ ForwardT* cFunForwardParams(const ForwardT*) { // def
 	return new ForwardT();
 }
 
+namespace ns0 {
+class clDeclaredInNS;
+extern int varWithDefinition;
+int varWithDefFirst = 99;
+}
+
+
+namespace ns0_alias = ns0;
+class ns0_alias::clDeclaredInNS{};
+extern int ns0_alias::varWithDefFirst;
+
+using clDeclaredInNSAlias = ns0_alias::clDeclaredInNS;
+
+// int ns0_alias::varInNSAlias; // illegal declaration
+int ns0_alias::varWithDefinition = 21;
+
 namespace ns {
+
+int g_varInNS;
+
 namespace {
 	void funInInnerAnonNS();
 }
 
 namespace NestedNS {
 	int funInNestedNS();
-	int g_inNestedNS;
+	int g_varInNestedNS;
 }
 
 namespace {
@@ -50,6 +74,10 @@ public:
 	int fieldInAnonClass;
 	// static int s_fieldInAnonClass; not legal C++
 } NoName;
+
+enum EnumInNS {one, two, three};
+
+enum class EnumClass : char { one, two, three};
 
 class CppTest {
 public:

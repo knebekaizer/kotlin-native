@@ -76,7 +76,33 @@ private class ObjCCategoryImpl(
     override val properties = mutableListOf<ObjCProperty>()
 }
 
-internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean = false) : NativeIndex() {
+class Namespace(val name:String, parent: Namespace? = null)
+
+
+private fun getParentName(cursor: CValue<CXCursor>, pkg: List<String> = emptyList()) : String? { // }: List<String>? {
+    // This doesn't work for anonymous C++ struct (such as typedef struct { void foo(); } TypeDefName)  as well as anon namespace
+    // In contrast, clang_getTypeSpelling return fully qualified name for struct & class (incl. typedef anon struct),
+    // but does not help for anything elde such as template member, namespace etc
+    // So, TODO Use ultimately clang_getTypeSpelling for CXType_Record (no traversing needed) and traverse up the whole hierarchy for anythiong else
+    // Unfortunately, this won't work too for variable decl with anon type like that: ''struct { void foo(); } x;''
+    // while function is accessible as x.foo()
+
+    // skip this (zero) level:
+
+    var parent = clang_getCursorSemanticParent(cursor)
+    if (clang_isDeclaration(parent.kind) == 0)
+        return if (pkg.isNotEmpty()) pkg.joinToString("::") else null
+
+    val type = clang_getCursorType(parent)
+    if (type.kind == CXTypeKind.CXType_Record)
+        return clang_getTypeSpelling(type).convertAndDispose()
+
+    val name = getCursorSpelling(parent)
+    return getParentName(parent, listOf(name) + pkg)
+}
+
+
+internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean = false, namespace: Namespace? = null) : NativeIndex() {
 
     private sealed class DeclarationID {
         data class USR(val usr: String) : DeclarationID()
@@ -795,7 +821,7 @@ val nameS = getCursorSpelling(cursor)
 val type = clang_getCursorType(cursor)
 val typeS = clang_getTypeSpelling(type).convertAndDispose()
 val kindS = clang_getTypeKindSpelling(type.kind).convertAndDispose()
-println("indexDeclaration> lang = $lang [${clang_getCursorKindSpelling(cursor.kind).convertAndDispose()}] $nameS : $typeS.$kindS")
+println("indexDeclaration> [${clang_getCursorKindSpelling(cursor.kind).convertAndDispose()}] $nameS : $typeS \t$kindS \t$lang")
 
         if (!this.library.includesDeclaration(cursor)) {
             return
@@ -825,7 +851,7 @@ println("indexDeclaration> lang = $lang [${clang_getCursorKindSpelling(cursor.ki
                 getStructDeclAt(cursor)
             }
 
-            CXIdxEntity_Typedef -> {
+            CXIdxEntity_Typedef, CXIdxEntity_CXXTypeAlias -> {
                 val type = clang_getCursorType(cursor)
                 getTypedef(type)
             }
@@ -843,6 +869,9 @@ println("indexDeclaration> lang = $lang [${clang_getCursorKindSpelling(cursor.ki
             }
 
             CXIdxEntity_Variable -> {
+                val parentKind = info.semanticContainer!!.pointed.cursor.kind
+                val n = entityName
+                val n2 = getCursorSpelling(cursor)
                 if (info.semanticContainer!!.pointed.cursor.kind == CXCursorKind.CXCursor_TranslationUnit) {
                     // Top-level variable.
                     globalById.getOrPut(getDeclarationId(cursor)) {
@@ -852,7 +881,18 @@ println("indexDeclaration> lang = $lang [${clang_getCursorKindSpelling(cursor.ki
                                 isConst = clang_isConstQualifiedType(clang_getCursorType(cursor)) != 0
                         )
                     }
+                } else if (info.semanticContainer!!.pointed.cursor.kind == CXCursorKind.CXCursor_Namespace) {
+                    globalById.getOrPut(getDeclarationId(cursor)) {
+                        GlobalDecl(
+                                name = entityName!!,
+                                type = convertCursorType(cursor),
+                                isConst = clang_isConstQualifiedType(clang_getCursorType(cursor)) != 0,
+                                parentName = getParentName(cursor)
+                        )
+                    }
+
                 }
+
             }
 
             CXIdxEntity_ObjCClass -> if (cursor.kind != CXCursorKind.CXCursor_ObjCClassRef /* not a forward declaration */) {
@@ -911,28 +951,6 @@ println("indexDeclaration> lang = $lang [${clang_getCursorKindSpelling(cursor.ki
         if (isAvailable(cursor)) {
             getObjCProtocolAt(cursor)
         }
-    }
-
-    private fun getParentName(cursor: CValue<CXCursor>, pkg: List<String> = emptyList()) : String? { // }: List<String>? {
-        // This doesn't work for anonymous C++ struct (such as typedef struct { void foo(); } TypeDefName)  as well as anon namespace
-        // In contrast, clang_getTypeSpelling return fully qualified name for struct & class (incl. typedef anon struct),
-        // but does not help for anything elde such as template member, namespace etc
-        // So, TODO Use ultimately clang_getTypeSpelling for CXType_Record (no traversing needed) and traverse up the whole hierarchy for anythiong else
-        // Unfortunately, this won't work too for variable decl with anon type like that: ''struct { void foo(); } x;''
-        // while function is accessible as x.foo()
-
-        // skip this (zero) level:
-
-        var parent = clang_getCursorSemanticParent(cursor)
-        if (clang_isDeclaration(parent.kind) == 0)
-            return if (pkg.isNotEmpty()) pkg.joinToString("::") else null
-
-        val type = clang_getCursorType(parent)
-        if (type.kind == CXTypeKind.CXType_Record)
-            return clang_getTypeSpelling(type).convertAndDispose()
-
-        val name = getCursorSpelling(parent)
-        return getParentName(parent, listOf(name) + pkg)
     }
 
     private fun getFunction(cursor: CValue<CXCursor>, receiver: StructDecl? = null): FunctionDecl {
@@ -1066,6 +1084,8 @@ println("indexDeclaration> lang = $lang [${clang_getCursorKindSpelling(cursor.ki
 
 }
 
+
+
 fun buildNativeIndexImpl(library: NativeLibrary, verbose: Boolean): IndexerResult {
     val result = NativeIndexImpl(library, verbose)
     val compilation = indexDeclarations(result)
@@ -1103,7 +1123,6 @@ private fun indexDeclarations(nativeIndex: NativeIndexImpl): CompilationWithPCH 
                 }
             })
 
-            val rootCursor = clang_getTranslationUnitCursor(translationUnit)
             visitChildren(clang_getTranslationUnitCursor(translationUnit)) { cursor, _ ->
                 val file = getContainingFile(cursor)
                 if (file in headers && nativeIndex.library.includesDeclaration(cursor)) {
@@ -1117,8 +1136,8 @@ private fun indexDeclarations(nativeIndex: NativeIndexImpl): CompilationWithPCH 
                     val isDefNotNull = (clang_Cursor_isNull(definitionCursor) == 0)
                     val isDefCursor = clang_isCursorDefinition(cursor)
 
-                //    println("visitTypes> lang = $lang [${clang_getCursorKindSpelling(cursor.kind).convertAndDispose()}] $nameS : $typeS.$kindS \tCursor(isDef=$isDefCursor, hasDef=$isDefNotNull, theSame=$theSame")
-                    println("visitTypes> [${clang_getCursorKindSpelling(cursor.kind).convertAndDispose()}] \t $nameS : $typeS.$kindS \tCursor(isDef=$isDefCursor, hasDef=$isDefNotNull, theSame=$theSame")
+                    println("visitTypes> [${clang_getCursorKindSpelling(cursor.kind).convertAndDispose()}] \t$nameS : $typeS \t$kindS \t$lang")
+                //    println("visitTypes> [${clang_getCursorKindSpelling(cursor.kind).convertAndDispose()}] \t $nameS : $typeS.$kindS \tCursor(isDef=$isDefCursor, hasDef=$isDefNotNull, theSame=$theSame")
                     when (cursor.kind) {
                         else -> {
                         }
