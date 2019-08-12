@@ -55,6 +55,9 @@ int g_varInNS;
 
 namespace {
 	void funInInnerAnonNS();
+	namespace nsInAnonNS {
+		int memberOf_nsInAnonNS;
+	}
 }
 
 namespace NestedNS {
