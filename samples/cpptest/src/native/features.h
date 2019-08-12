@@ -2,12 +2,39 @@
 int plainCFreeFunction();
 static inline void plainCInternalFunction();  // [Conceptual] should be mapped as internal fun or not eligible for binding at all
 
+struct PlainCStruct {
+	int plainCField;
+	struct {
+		int innerCField;
+	};
+};
+
+void wrappingFun() {
+	class NestedInFunction {
+	} var;  // local types shall be ignored
+}
+
+struct UnknownT;
+UnknownT* cFunUnknownParams(const UnknownT*);
+
+
+struct ForwardT;  // declaratuin
+ForwardT* cFunForwardParams(const ForwardT*);  // decl
+
+struct ForwardT {}; // definition
+ForwardT* cFunForwardParams(const ForwardT*) { // def
+	return new ForwardT();
+}
 namespace ns {
+namespace {
+	void funInInnerAnonNS();
+}
 
 typedef class {
 public:
 	int noNameMember(int& iRef);
 //	int noNameMember(const int& iRef);
+//	static int noNameStaticFun(); // won't work
 } NoName;
 
 class CppTest {
@@ -36,8 +63,13 @@ public:
 
     static int getCount() { return counter; }
 	template <class X> void fooTmplMember() const;
+	class Nested {
+	public:
+		int nestedFoo();
+	};
 private:
-//	CppTest* fct() const;
+	CppTest* funPrivate() const;
+	static int s_funPrivate();
 
 private:
 	int iPriv;
@@ -66,6 +98,7 @@ public:
 	void baz() const {}
 };
 
+/*
 template <typename T> class TmplClass {
 public:
 	void baz() const {}
