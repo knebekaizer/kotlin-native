@@ -76,8 +76,6 @@ private class ObjCCategoryImpl(
     override val properties = mutableListOf<ObjCProperty>()
 }
 
-class Namespace(val name:String, parent: Namespace? = null)
-
 
 private fun getParentName(cursor: CValue<CXCursor>, pkg: List<String> = emptyList()) : String? { // }: List<String>? {
     // This doesn't work for anonymous C++ struct (such as typedef struct { void foo(); } TypeDefName)  as well as anon namespace
@@ -102,7 +100,7 @@ private fun getParentName(cursor: CValue<CXCursor>, pkg: List<String> = emptyLis
 }
 
 
-internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean = false, namespace: Namespace? = null) : NativeIndex() {
+internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean = false) : NativeIndex() {
 
     private sealed class DeclarationID {
         data class USR(val usr: String) : DeclarationID()
@@ -827,6 +825,13 @@ println("indexDeclaration> [${clang_getCursorKindSpelling(cursor.kind).convertAn
             return
         }
 
+        val namespace: Namespace? =
+        // semantic parent of any namespace member is always namespace itself (no type aliases etc)
+            if (info.semanticContainer!!.pointed.cursor.kind == CXCursorKind.CXCursor_Namespace) {
+                val parent = info.semanticContainer!!.pointed.cursor.readValue()
+                Namespace(getCursorSpelling(parent), getParentName(parent))
+            } else null
+
         if (!cursor.isRecursivelyPublic()) {
             // c++ : skip anon namespaces, static functions and variables and private inner classes
             return
@@ -858,8 +863,12 @@ println("indexDeclaration> [${clang_getCursorKindSpelling(cursor.kind).convertAn
 
             CXIdxEntity_Function -> {
                 if (isSuitableFunction(cursor)) {
-                    functionById.getOrPut(getDeclarationId(cursor)) {
-                        getFunction(cursor)
+                    if (entityName?.take(8) == "operator") {
+                        // not implemented yet
+                    } else {
+                        functionById.getOrPut(getDeclarationId(cursor)) {
+                            getFunction(cursor)
+                        }
                     }
                 }
             }
@@ -870,18 +879,8 @@ println("indexDeclaration> [${clang_getCursorKindSpelling(cursor.kind).convertAn
 
             CXIdxEntity_Variable -> {
                 val parentKind = info.semanticContainer!!.pointed.cursor.kind
-                val n = entityName
-                val n2 = getCursorSpelling(cursor)
-                if (info.semanticContainer!!.pointed.cursor.kind == CXCursorKind.CXCursor_TranslationUnit) {
-                    // Top-level variable.
-                    globalById.getOrPut(getDeclarationId(cursor)) {
-                        GlobalDecl(
-                                name = entityName!!,
-                                type = convertCursorType(cursor),
-                                isConst = clang_isConstQualifiedType(clang_getCursorType(cursor)) != 0
-                        )
-                    }
-                } else if (info.semanticContainer!!.pointed.cursor.kind == CXCursorKind.CXCursor_Namespace) {
+                if (parentKind == CXCursorKind.CXCursor_TranslationUnit || parentKind == CXCursorKind.CXCursor_Namespace) {
+                    // Top-level or namespace member. Skip class static members - they are loaded by visitClass
                     globalById.getOrPut(getDeclarationId(cursor)) {
                         GlobalDecl(
                                 name = entityName!!,
@@ -890,9 +889,7 @@ println("indexDeclaration> [${clang_getCursorKindSpelling(cursor.kind).convertAn
                                 parentName = getParentName(cursor)
                         )
                     }
-
                 }
-
             }
 
             CXIdxEntity_ObjCClass -> if (cursor.kind != CXCursorKind.CXCursor_ObjCClassRef /* not a forward declaration */) {
@@ -1084,8 +1081,6 @@ println("indexDeclaration> [${clang_getCursorKindSpelling(cursor.kind).convertAn
 
 }
 
-
-
 fun buildNativeIndexImpl(library: NativeLibrary, verbose: Boolean): IndexerResult {
     val result = NativeIndexImpl(library, verbose)
     val compilation = indexDeclarations(result)
@@ -1146,7 +1141,7 @@ private fun indexDeclarations(nativeIndex: NativeIndexImpl): CompilationWithPCH 
                 CXChildVisitResult.CXChildVisit_Recurse
             }
 
-                visitChildren(clang_getTranslationUnitCursor(translationUnit)) { cursor, _ ->
+            visitChildren(clang_getTranslationUnitCursor(translationUnit)) { cursor, _ ->
                 val file = getContainingFile(cursor)
                 if (file in headers && nativeIndex.library.includesDeclaration(cursor)) {
                     when (cursor.kind) {
