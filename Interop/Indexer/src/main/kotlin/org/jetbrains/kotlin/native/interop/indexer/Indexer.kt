@@ -193,17 +193,11 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
         return StructDeclImpl(typeSpelling, getLocation(cursor))
     }
 
-    // TODO this should not be a Indexer class method: either free function, or CXCursor extension
-    private fun isPublic(cursor: CValue<CXCursor>): Boolean {
-        val access = clang_getCXXAccessSpecifier(cursor)
-        return access != CX_CXXAccessSpecifier.CX_CXXProtected && access != CX_CXXAccessSpecifier.CX_CXXPrivate
-    }
-
     private fun visitClass(cursor: CValue<CXCursor>, clazz: StructDefImpl)  {
 
         // TODO skip method (function) when encounter UnsupportedType in params or ret value. Otherwise all class methods will be lost due to exception (?)
         visitChildren(cursor) { cursor, _ ->
-            if (isPublic(cursor)) {
+            if (cursor.isPublic) {
                 // TODO If a kotlin class is _conceptually_ derived from its c++ counterpart, then it shall be able to override virtual private and access protected
                 when (cursor.kind) {
                     CXCursorKind.CXCursor_CXXMethod -> {
@@ -262,7 +256,7 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
     }
 
     private fun addDeclaredFields(result: MutableList<StructMember>, structType: CValue<CXType>, containerType: CValue<CXType>) {
-        getFields(containerType).filter { isPublic(it) }.forEach { fieldCursor ->
+        getFields(containerType).filter { it.isPublic }.forEach { fieldCursor ->
             val name = getCursorSpelling(fieldCursor)
             if (name.isNotEmpty()) {
                 val fieldType = convertCursorType(fieldCursor)
@@ -800,6 +794,10 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
             return
         }
 
+        if (!cursor.isRecursivelyPublic()) {
+            // c++ : skip anon namespaces, static functions and variables and private inner classes
+            return
+        }
         /**
          * TODO It may be better to look at CXTypeKind instead of CXIdxEntity to distinguish C++ classes from templates
          * C++ templates are also CXIdxEntity_CXXClass but CXCursor_ClassTemplate,
