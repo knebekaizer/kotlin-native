@@ -1,4 +1,9 @@
 
+typedef int (*funT)(int);
+void foo( funT );
+void bar( int (*)(int) );
+
+/*
 template <typename T> struct TmplStruct {
 public:
 	void baz() const {}
@@ -9,9 +14,12 @@ void funTmplParam(TmplStruct<int>& t);
 template <class X> void tmplFunction();
 template <class X> void tmplFunction(X x);
 
-int funVariadic(const char* format, ...);
+//int funVariadic(const char* format, ...);
 
-/*
+#include <cstdarg>
+void appendVAList(const char format[], va_list);
+
+
 int plainCFreeFunction();
 static inline void plainCInternalFunction();  // [Conceptual] should be mapped as internal fun or not eligible for binding at all
 
@@ -126,6 +134,9 @@ public:
 	public:
 		int nestedFoo();
 	};
+
+	enum NestedEnum {one, two, three};
+	void funEnumParam(NestedEnum e);
 
 private:
 	CppTest* funPrivate() const;
