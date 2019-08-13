@@ -1,4 +1,15 @@
 
+template <typename T> struct TmplStruct {
+public:
+	void baz() const {}
+};
+
+//void funTmplParam(TmplStruct<int>& t);
+
+template <class X> void tmplFunction();
+template <class X> void tmplFunction(X x);
+
+
 int plainCFreeFunction();
 static inline void plainCInternalFunction();  // [Conceptual] should be mapped as internal fun or not eligible for binding at all
 
@@ -138,11 +149,7 @@ CppTest* create();
 namespace ns2 {
 	::CppTest* create();
 
-/*
-template <typename T> struct TmplStruct {
-public:
-	void baz() const {}
-};
+} // ns2
 /*
 template <typename T> class TmplClass {
 public:
@@ -156,5 +163,3 @@ struct Smth {
     IntTmplStruct intTmplStruct;
 };
 */
-} // ns2
-

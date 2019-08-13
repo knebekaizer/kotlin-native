@@ -848,11 +848,13 @@ println("indexDeclaration> [${clang_getCursorKindSpelling(cursor.kind).convertAn
                     // Skip anonymous struct.
                     // (It gets included anyway if used as a named field type).
                 } else {
+                    if (clang_getCursorLanguage(cursor) != CXLanguageKind.CXLanguage_CPlusPlus)
                     getStructDeclAt(cursor)
                 }
             }
 
             CXIdxEntity_CXXClass -> {
+                if (clang_getCursorLanguage(cursor) != CXLanguageKind.CXLanguage_CPlusPlus)
                 getStructDeclAt(cursor)
             }
 
@@ -860,19 +862,22 @@ println("indexDeclaration> [${clang_getCursorKindSpelling(cursor.kind).convertAn
                 val type = clang_getCursorType(cursor)
                 getTypedef(type)
             }
-
+/*
             CXIdxEntity_Function -> {
                 if (isSuitableFunction(cursor)) {
                     if (entityName?.take(8) == "operator") {
                         // not implemented yet
                     } else {
+                        val id = getDeclarationId(cursor)
+                        if (id is DeclarationID.USR)
+                            println("usr> ${getCursorSpelling(cursor)} \t${id.usr}")
                         functionById.getOrPut(getDeclarationId(cursor)) {
                             getFunction(cursor)
                         }
                     }
                 }
             }
-
+*/
             CXIdxEntity_Enum -> {
                 getEnumDefAt(cursor)
             }
@@ -936,6 +941,22 @@ println("indexDeclaration> [${clang_getCursorKindSpelling(cursor.kind).convertAn
                 // Ignore declaration.
             }
         }
+    }
+
+    fun indexCxxFunction(cursor: CValue<CXCursor>) {
+        if (isSuitableFunction(cursor)) {
+            if (getCursorSpelling(cursor).take(8) == "operator") {
+                // not implemented yet
+            } else {
+                functionById.getOrPut(getDeclarationId(cursor)) {
+                    getFunction(cursor)
+                }
+            }
+        }
+    }
+
+    fun indexCxxClass(cursor: CValue<CXCursor>) {
+        getStructDeclAt(cursor)
     }
 
     fun indexObjCClass(cursor: CValue<CXCursor>) {
@@ -1133,8 +1154,16 @@ private fun indexDeclarations(nativeIndex: NativeIndexImpl): CompilationWithPCH 
 
                     println("visitTypes> [${clang_getCursorKindSpelling(cursor.kind).convertAndDispose()}] \t$nameS : $typeS \t$kindS \t$lang")
                 //    println("visitTypes> [${clang_getCursorKindSpelling(cursor.kind).convertAndDispose()}] \t $nameS : $typeS.$kindS \tCursor(isDef=$isDefCursor, hasDef=$isDefNotNull, theSame=$theSame")
-                    when (cursor.kind) {
-                        else -> {
+
+                    if (cursor.isRecursivelyPublic()) {
+                        when (cursor.kind) {
+                            CXCursorKind.CXCursor_ClassDecl, CXCursorKind.CXCursor_StructDecl -> {
+                                if (clang_getCursorLanguage(cursor) == CXLanguageKind.CXLanguage_CPlusPlus)
+                                    nativeIndex.indexCxxClass(cursor)
+                            }
+                            CXCursorKind.CXCursor_FunctionDecl -> nativeIndex.indexCxxFunction(cursor)
+                            else -> {
+                            }
                         }
                     }
                 }
