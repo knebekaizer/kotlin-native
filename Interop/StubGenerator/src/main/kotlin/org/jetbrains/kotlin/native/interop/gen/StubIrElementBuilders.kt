@@ -360,6 +360,7 @@ internal class FunctionStubBuilder(
             context.mirror(func.returnType).argType
         })
 
+
         val annotations: List<AnnotationStub>
         val mustBeExternal: Boolean
         if (!func.isVararg || platform != KotlinPlatform.NATIVE) {

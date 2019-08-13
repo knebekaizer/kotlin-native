@@ -151,7 +151,6 @@ class SimpleBridgeGeneratorImpl(
         nativeBridges.add(nativeBacked to nativeBridge)
 
         nativeLines.forEach { println(it )}
-        kotlinLines.forEach { println(it )}
         return callExpr
     }
 
