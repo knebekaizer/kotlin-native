@@ -615,7 +615,8 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
                 PointerType(
                         if (convertedPointeeType == UnsupportedType) VoidType else convertedPointeeType,
                         pointeeIsConst = pointeeIsConst,
-                        isLVReference = (kind == CXType_LValueReference)
+                        isLVReference = (kind == CXType_LValueReference),
+                        spelling = type.spelling
                 )
             }
 

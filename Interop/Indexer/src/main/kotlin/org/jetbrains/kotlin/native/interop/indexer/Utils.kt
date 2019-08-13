@@ -30,7 +30,11 @@ internal val CValue<CXType>.kind: CXTypeKind get() = this.useContents { kind }
 
 internal val CValue<CXCursor>.kind: CXCursorKind get() = this.useContents { kind }
 
-internal val CValue<CXType>.kindSpelling: String get() = clang_getTypeKindSpelling(this.kind).convertAndDispose()
+internal val CValue<CXCursor>.type: CValue<CXType> get() = clang_getCursorType(this)
+internal val CValue<CXType>.spelling: String get() = clang_getTypeSpelling(this).convertAndDispose()
+internal val CXTypeKind.spelling: String get() = clang_getTypeKindSpelling(this).convertAndDispose()
+internal val CXCursorKind.spelling: String get() = clang_getCursorKindSpelling(this).convertAndDispose()
+
 
 internal val CValue<CXCursor>.isPublic: Boolean get() {
     val access = clang_getCXXAccessSpecifier(this)
@@ -395,6 +399,7 @@ fun List<List<String>>.mapFragmentIsCompilable(originalLibrary: CompilationWithP
                 if (fragmentsToCheck.isNotEmpty()) {
                     // The first fragment is now known to be non-compilable.
                     val firstFragment = fragmentsToCheck.removeAt(0)
+firstFragment.value.forEach { println(it) }
                     indicesOfNonCompilable.add(firstFragment.index)
                 }
 

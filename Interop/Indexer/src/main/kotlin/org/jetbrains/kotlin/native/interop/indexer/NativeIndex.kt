@@ -322,7 +322,9 @@ data class RecordType(val decl: StructDecl) : Type
 
 data class EnumType(val def: EnumDef) : Type
 
-data class PointerType(val pointeeType: Type, val pointeeIsConst: Boolean = false, val isLVReference: Boolean = false) : Type
+// when pointer type is provided by clang we'll use ots correct spelling
+data class PointerType(val pointeeType: Type, val pointeeIsConst: Boolean = false,
+                       val isLVReference: Boolean = false, val spelling: String? = null) : Type
 // TODO: refactor type representation and support type modifiers more generally.
 
 data class FunctionType(val parameterTypes: List<Type>, val returnType: Type) : Type

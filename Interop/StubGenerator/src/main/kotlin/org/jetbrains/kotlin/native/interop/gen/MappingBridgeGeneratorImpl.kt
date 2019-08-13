@@ -79,19 +79,22 @@ class MappingBridgeGeneratorImpl(
             val nativeValues = mutableListOf<String>()
             kotlinValues.forEachIndexed { index, (type, _) ->
                 val unwrappedType = type.unwrapTypedefs()
+                val cppRefTypePrefix = if (unwrappedType is PointerType && unwrappedType.isLVReference) "*" else ""
                 when {
+                    type is Typedef ->
+                        nativeValues.add("(${type.def.name})${bridgeNativeValues[index]}")
+                    type is PointerType && type.spelling != null ->
+                        nativeValues.add("(${type.spelling})${bridgeNativeValues[index]}")
                     unwrappedType is EnumType ->
                         nativeValues.add("(${unwrappedType.def.spelling})${bridgeNativeValues[index]}")
                     unwrappedType is RecordType ->
                         nativeValues.add("*(${unwrappedType.decl.spelling}*)${bridgeNativeValues[index]}")
-                    else -> {
-                        val cppRefTypePrefix = if (unwrappedType is PointerType && unwrappedType.isLVReference) "*" else ""
+                    else ->
                         nativeValues.add(cppRefTypePrefix +
                                 mirror(declarationMapper, type).info.cFromBridged(
                                         bridgeNativeValues[index], scope, nativeBacked
                                 )
                         )
-                    }
                 }
             }
 
