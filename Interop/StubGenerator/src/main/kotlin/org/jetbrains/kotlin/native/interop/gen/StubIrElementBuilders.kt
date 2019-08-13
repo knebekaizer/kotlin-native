@@ -134,7 +134,13 @@ internal class StructStubBuilder(
         var classMethods: List<FunctionStub> =
                 def.methods
                         .filter { !it.isCxxInstanceMethod }
-                        .map { func -> (FunctionStubBuilder(context, func).build() as List<FunctionStub>).single() }
+                        .map { func ->
+                            try {
+                                (FunctionStubBuilder(context, func).build() as List<FunctionStub>).single()
+                            } catch (e: Throwable) {
+                                null
+                            }
+                        }.filterNotNull()
         val classFields = def.staticFields
                 .map { field -> (GlobalStubBuilder(context, field).build() as List<PropertyStub>).single() }
         val companion = ClassStub.Companion(companionSuperInit,
