@@ -68,7 +68,13 @@ internal class StructStubBuilder(
         var methods: List<FunctionStub> =
             def.methods
                     .filter { it.isCxxInstanceMethod }
-                    .map { func -> (FunctionStubBuilder(context, func).build() as List<FunctionStub>).single()}
+                    .map { func ->
+                        try {
+                            (FunctionStubBuilder(context, func).build() as List<FunctionStub>).single()
+                        } catch (e: Throwable) {
+                            null
+                        }
+                    }.filterNotNull()
 
         val fields: List<PropertyStub?> = def.fields.map { field ->
             try {
