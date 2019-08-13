@@ -228,7 +228,8 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
                         val isOperatorFunction = (clang_getCursorSpelling(cursor).convertAndDispose().take(8) == "operator")
                         // operators are Not Implemented Yet
                         if (!isOperatorFunction) {
-                            clazz.methods.add(getFunction(cursor, clazz.decl))
+                            if (clang_isFunctionTypeVariadic(clang_getCursorType(cursor)) == 0) // FIXME why it doesn't work???
+                                clazz.methods.add(getFunction(cursor, clazz.decl))
                         }
                     }
                     CXCursorKind.CXCursor_Constructor ->
@@ -1070,12 +1071,31 @@ println("indexDeclaration> [${clang_getCursorKindSpelling(cursor.kind).convertAn
         CXAvailabilityKind.CXAvailability_NotAccessible -> false
     }
 
+    private fun isParmDeclEligible(cursor: CValue<CXCursor>): Boolean {
+        assert(cursor.kind == CXCursorKind.CXCursor_ParmDecl)
+        var ret = true
+        visitChildren(cursor) { cursor, _ ->
+            when (cursor.kind) {
+                CXCursorKind.CXCursor_TemplateRef -> {
+                    ret = false
+                    CXChildVisitResult.CXChildVisit_Break
+                }
+                else -> CXChildVisitResult.CXChildVisit_Recurse
+            }
+        }
+        return ret
+    }
+
     private fun getFunctionParameters(cursor: CValue<CXCursor>): List<Parameter> {
         val argNum = clang_Cursor_getNumArguments(cursor)
         val args = (0..argNum - 1).map {
             val argCursor = clang_Cursor_getArgument(cursor, it)
             val argName = getCursorSpelling(argCursor)
-            val type = convertCursorType(argCursor)
+            val type = if (isParmDeclEligible(argCursor)) {
+                convertCursorType(argCursor)
+            } else {
+                UnsupportedType // TODO It would be better to cancel loading of this FunctionDecl as it's invalid anyway
+            }
             Parameter(argName, type,
                     nsConsumed = hasAttribute(argCursor, NS_CONSUMED))
         }

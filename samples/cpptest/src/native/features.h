@@ -4,12 +4,14 @@ public:
 	void baz() const {}
 };
 
-//void funTmplParam(TmplStruct<int>& t);
+void funTmplParam(TmplStruct<int>& t);
 
 template <class X> void tmplFunction();
 template <class X> void tmplFunction(X x);
 
+int funVariadic(const char* format, ...);
 
+/*
 int plainCFreeFunction();
 static inline void plainCInternalFunction();  // [Conceptual] should be mapped as internal fun or not eligible for binding at all
 

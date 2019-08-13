@@ -30,6 +30,7 @@ internal val CValue<CXType>.kind: CXTypeKind get() = this.useContents { kind }
 
 internal val CValue<CXCursor>.kind: CXCursorKind get() = this.useContents { kind }
 
+internal val CValue<CXType>.kindSpelling: String get() = clang_getTypeKindSpelling(this.kind).convertAndDispose()
 
 internal val CValue<CXCursor>.isPublic: Boolean get() {
     val access = clang_getCXXAccessSpecifier(this)

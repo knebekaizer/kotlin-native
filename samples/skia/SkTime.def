@@ -1,5 +1,7 @@
 headers = include/core/SkTime.h include/core/SkString.h
 headerFilter = include/core/SkTime.h include/core/SkString.h
-package = SkTime
+#headers = include/core/SkString.h
+#headerFilter = include/core/SkString.h
+package = skia
 compilerOpts = -std=c++14
 compilerOpts = -x c++
