@@ -121,7 +121,7 @@ interface TypeDeclaration {
     val location: Location
 }
 
-sealed class StructMember(val name: String, val type: Type) {
+sealed class StructMember(val name: String, val type: Type) : Member {
     abstract val offset: Long?
 }
 
@@ -154,14 +154,14 @@ abstract class StructDecl(val spelling: String) : TypeDeclaration {
  * @param hasNaturalLayout must be `false` if the struct has unnatural layout, e.g. it is `packed`.
  * May be `false` even if the struct has natural layout.
  */
-abstract class StructDef(val size: Long, val align: Int, val decl: StructDecl) {
+abstract class StructDef(val size: Long, val align: Int, val decl: StructDecl) : SemanticParent {
 
     enum class Kind {
         STRUCT, UNION, CLASS
     }
 
     abstract val methods: List<FunctionDecl>
-    abstract val members: List<StructMember>
+    override abstract val members: List<StructMember>
     abstract val staticFields: List<GlobalDecl>
     abstract val kind: Kind
 
@@ -270,8 +270,16 @@ class FunctionDecl(val name: String, val parameters: List<Parameter>, val return
     val cxxReceiverClass: StructDecl? = cxxMethod?. let { (this.cxxMethod.receiverType.pointeeType as RecordType).decl }
 }
 
-class Namespace(val name: String, val parent: String? = null) {
+interface Member
+
+interface SemanticParent {
+    val members: Collection<Member>
+}
+
+class Namespace(val name: String, val parent: String? = null) : SemanticParent {
     val fullName: String = parent?.let { "$parent::$name" } ?: name
+
+    override val members: MutableSet<Member> = mutableSetOf<Member>()
 }
 
 

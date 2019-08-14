@@ -1,4 +1,10 @@
-
+namespace ns {
+	int fooInNs();
+	struct ClassInNS {
+		int v;
+	};
+}
+/*
 typedef int (*funT)(int);
 void foo( funT );
 void bar( int (*)(int) );
@@ -17,7 +23,7 @@ template <class X> void tmplFunction(X x);
 //int funVariadic(const char* format, ...);
 
 #include <cstdarg>
-void appendVAList(const char format[], va_list);
+//void appendVAList(const char format[], va_list); // doesn't work
 
 
 int plainCFreeFunction();
@@ -122,6 +128,8 @@ public:
 	virtual int foo(const CppTest*);
 //  virtual int foo(const CppTest*) const;
 
+	virtual int funWithDef();
+
     static int counter;
 
     static NoName compStaticField;
@@ -146,11 +154,16 @@ private:
 	int iPriv;
 };
 
+
 CppTest bar(CppTest* s);
 
 CppTest* create();
 
 } // ns
+
+inline int ns::CppTest::funWithDef() {
+	return 142;
+}
 
 namespace {
 ns::CppTest* fooInAnonNamespace();

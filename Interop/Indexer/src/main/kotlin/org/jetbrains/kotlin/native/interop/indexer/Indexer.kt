@@ -21,7 +21,7 @@ import clang.CXIdxEntityKind.*
 import clang.CXTypeKind.*
 import kotlinx.cinterop.*
 
-private class StructDeclImpl(spelling: String, override val location: Location) : StructDecl(spelling) {
+private class StructDeclImpl(spelling: String, override val location: Location) : StructDecl(spelling), Member {
     override var def: StructDefImpl? = null
 }
 
@@ -143,6 +143,10 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
         val headerId = getHeaderId(getContainingFile(cursor))
         return Location(headerId)
     }
+
+    private val namespaceById = mutableMapOf<DeclarationID, Namespace>()
+    val namespaces: Collection<Namespace>
+        get() = namespaceById.values
 
     override val structs: List<StructDecl> get() = structRegistry.included
     private val structRegistry = TypeDeclarationRegistry<StructDeclImpl>()
@@ -845,7 +849,7 @@ println("indexDeclaration> [${clang_getCursorKindSpelling(cursor.kind).convertAn
          * The same for CXCursor_FunctionDecl vs CXCursor_FunctionTemplate
          */
         when (kind) {
-            CXIdxEntity_Struct, CXIdxEntity_Union -> {
+ /*           CXIdxEntity_Struct, CXIdxEntity_Union -> {
                 if (entityName == null) {
                     // Skip anonymous struct.
                     // (It gets included anyway if used as a named field type).
@@ -859,7 +863,7 @@ println("indexDeclaration> [${clang_getCursorKindSpelling(cursor.kind).convertAn
                 if (clang_getCursorLanguage(cursor) != CXLanguageKind.CXLanguage_CPlusPlus)
                 getStructDeclAt(cursor)
             }
-
+*/
             CXIdxEntity_Typedef, CXIdxEntity_CXXTypeAlias -> {
                 val type = clang_getCursorType(cursor)
                 getTypedef(type)
@@ -957,8 +961,28 @@ println("indexDeclaration> [${clang_getCursorKindSpelling(cursor.kind).convertAn
         }
     }
 
+    private fun getSemanticParent(cursor: CValue<CXCursor>) : SemanticParent? {
+        val parent = clang_getCursorSemanticParent(cursor)
+
+        if (clang_isDeclaration(parent.kind) == 0)
+            return null
+
+        return when (parent.kind) {
+            CXCursorKind.CXCursor_Namespace ->
+                namespaceById.getOrPut(getDeclarationId(parent), { Namespace(getCursorSpelling(parent), getParentName(parent)) })
+            CXCursorKind.CXCursor_StructDecl, CXCursorKind.CXCursor_UnionDecl, CXCursorKind.CXCursor_ClassDecl ->
+                getStructDeclAt(parent).def
+            else ->
+                getSemanticParent(parent)
+        }
+    }
+
     fun indexCxxClass(cursor: CValue<CXCursor>) {
-        getStructDeclAt(cursor)
+
+        val parent = getSemanticParent(cursor)
+
+        val s = getStructDeclAt(cursor)
+        if (parent is Namespace) parent.members.add(s)
     }
 
     fun indexObjCClass(cursor: CValue<CXCursor>) {
@@ -1180,7 +1204,7 @@ private fun indexDeclarations(nativeIndex: NativeIndexImpl): CompilationWithPCH 
                     if (cursor.isRecursivelyPublic()) {
                         when (cursor.kind) {
                             CXCursorKind.CXCursor_ClassDecl, CXCursorKind.CXCursor_StructDecl -> {
-                                if (clang_getCursorLanguage(cursor) == CXLanguageKind.CXLanguage_CPlusPlus)
+                            //    if (clang_getCursorLanguage(cursor) == CXLanguageKind.CXLanguage_CPlusPlus)
                                     nativeIndex.indexCxxClass(cursor)
                             }
                             CXCursorKind.CXCursor_FunctionDecl -> nativeIndex.indexCxxFunction(cursor)
