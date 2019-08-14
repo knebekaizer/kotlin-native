@@ -162,10 +162,10 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
     override val typedefs get() = typedefRegistry.included
     private val typedefRegistry = TypeDeclarationRegistry<TypedefDef>()
 
-    private val functionById = mutableMapOf<DeclarationID, FunctionDecl>()
+    private val functionById = mutableMapOf<DeclarationID, FunctionDecl?>()
 
     override val functions: Collection<FunctionDecl>
-        get() = functionById.values
+        get() = functionById.values.filterNotNull()
 
     override val macroConstants = mutableListOf<ConstantDef>()
     override val wrappedMacros = mutableListOf<WrappedMacroDef>()
@@ -229,13 +229,13 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
                         // operators are Not Implemented Yet
                         if (!isOperatorFunction) {
                             if (clang_isFunctionTypeVariadic(clang_getCursorType(cursor)) == 0) // FIXME why it doesn't work???
-                                clazz.methods.add(getFunction(cursor, clazz.decl))
+                                getFunction(cursor, clazz.decl)?.let { clazz.methods.add(it) }
                         }
                     }
                     CXCursorKind.CXCursor_Constructor ->
-                        clazz.methods.add(getFunction(cursor, clazz.decl)) // methods.add(getCxxConstructor(cursor, receiver))
+                        getFunction(cursor, clazz.decl)?.let { clazz.methods.add(it) }
                     CXCursorKind.CXCursor_Destructor ->
-                        clazz.methods.add(getFunction(cursor, clazz.decl)) // methods.add(getCxxDenstructor(cursor, receiver))
+                        getFunction(cursor, clazz.decl)?.let { clazz.methods.add(it) }
 
                     CXCursorKind.CXCursor_VarDecl -> {
                         clazz.staticFields.add(GlobalDecl(
@@ -973,7 +973,11 @@ println("indexDeclaration> [${clang_getCursorKindSpelling(cursor.kind).convertAn
         }
     }
 
-    private fun getFunction(cursor: CValue<CXCursor>, receiver: StructDecl? = null): FunctionDecl {
+    private fun getFunction(cursor: CValue<CXCursor>, receiver: StructDecl? = null): FunctionDecl? {
+        if (!isFuncDeclEligible(cursor)) {
+            log("Skip function ${clang_getCursorSpelling(cursor).convertAndDispose()}")
+            return null
+        }
         var name = clang_getCursorSpelling(cursor).convertAndDispose()
         var returnType = convertType(clang_getCursorResultType(cursor), clang_getCursorResultTypeAttributes(cursor))
 
@@ -1072,8 +1076,9 @@ println("indexDeclaration> [${clang_getCursorKindSpelling(cursor.kind).convertAn
         CXAvailabilityKind.CXAvailability_NotAccessible -> false
     }
 
-    private fun isParmDeclEligible(cursor: CValue<CXCursor>): Boolean {
-        assert(cursor.kind == CXCursorKind.CXCursor_ParmDecl)
+    // Skip functions which parameter or return type is TemplateRef
+    private fun isFuncDeclEligible(cursor: CValue<CXCursor>): Boolean {
+    //    assert(cursor.kind == CXCursorKind.CXCursor_ParmDecl)
         var ret = true
         visitChildren(cursor) { cursor, _ ->
             when (cursor.kind) {
@@ -1092,11 +1097,7 @@ println("indexDeclaration> [${clang_getCursorKindSpelling(cursor.kind).convertAn
         val args = (0..argNum - 1).map {
             val argCursor = clang_Cursor_getArgument(cursor, it)
             val argName = getCursorSpelling(argCursor)
-            val type = if (isParmDeclEligible(argCursor)) {
-                convertCursorType(argCursor)
-            } else {
-                UnsupportedType // TODO It would be better to cancel loading of this FunctionDecl as it's invalid anyway
-            }
+            val type = convertCursorType(argCursor)
             Parameter(argName, type,
                     nsConsumed = hasAttribute(argCursor, NS_CONSUMED))
         }

@@ -38,4 +38,18 @@ Design issues
 0. В контейнере members может лежать IncompleteField. Это имело бы смысл, если Incomplrtr - такой lazy тип, который позже можно, например, зарезолвить. Но это не предусмотрено - так что зачем добавлять dummy, надо было просто пропустить
 
 0. getArrayLength(type: ArrayType) сделана приватным методом StructStubBuilder'а. Должна быть или свободной функцией, или (лучше) extension: ArrayType.getArrayLength() 
-	
+
+FIXME
+=====
+1. 
+```
+SkTime-build/kotlin/skia/skia.kt:1793:5: error: conflicting overloads: public final fun mapRect(rect: CValuesRef<SkRect>?): Boolean defined in skia.SkMatrix, public final fun mapRect(src: CValuesRef<SkRect>?): CValue<SkRect> defined in skia.SkMatrix
+    fun mapRect(rect: CValuesRef<SkRect>?): Boolean {
+```
+Source:
+```C++
+    bool mapRect(SkRect* rect) const;
+    SkRect mapRect(const SkRect& src) const;
+```
+Обе сигнатуры мапятся в CValuesRef<SkRect>?. Надо сделать LVRef -> notNullable
+
