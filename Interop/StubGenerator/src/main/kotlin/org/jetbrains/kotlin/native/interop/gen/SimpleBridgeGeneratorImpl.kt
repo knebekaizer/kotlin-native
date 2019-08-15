@@ -27,8 +27,7 @@ class SimpleBridgeGeneratorImpl(
         private val jvmFileClassName: String,
         private val libraryForCStubs: CompilationWithPCH,
         override val topLevelNativeScope: NativeScope,
-        private val topLevelKotlinScope: KotlinScope,
-        private val isCPPContext: Boolean = false
+        private val topLevelKotlinScope: KotlinScope
 ) : SimpleBridgeGenerator {
 
     private var nextUniqueId = 0
@@ -117,7 +116,7 @@ class SimpleBridgeGeneratorImpl(
                 "JNIEXPORT $cReturnType JNICALL $functionName ($joinedCParameters)"
             }
             KotlinPlatform.NATIVE -> {
-                val externCPrefix = if (isCPPContext) "extern \"C\" " else ""
+                val externCPrefix = if (libraryForCStubs.language == Language.CPP) "extern \"C\" " else ""
                 val functionName = pkgName.replace(INVALID_CLANG_IDENTIFIER_REGEX, "_") + "_$kotlinFunctionName"
                 if (independent) kotlinLines.add("@" + topLevelKotlinScope.reference(KotlinTypes.independent))
                 kotlinLines.add("@SymbolName(${functionName.quoteAsKotlinLiteral()})")
