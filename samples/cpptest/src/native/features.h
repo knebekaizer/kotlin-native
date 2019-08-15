@@ -3,7 +3,7 @@ typedef int (*funT)(int);
 void foo( funT );
 void bar( int (*)(int) );
 
-/*
+
 template <typename T> struct TmplStruct {
 public:
 	void baz() const {}

@@ -57,8 +57,7 @@ class StubIrBridgeBuilder(
                         override val mappingBridgeGenerator: MappingBridgeGenerator
                             get() = this@StubIrBridgeBuilder.mappingBridgeGenerator
                     },
-                    topLevelKotlinScope = kotlinFile,
-                    isCPPContext = context.configuration.library.isCPlusPlus()
+                    topLevelKotlinScope = kotlinFile
             )
 
     private val mappingBridgeGenerator: MappingBridgeGenerator =

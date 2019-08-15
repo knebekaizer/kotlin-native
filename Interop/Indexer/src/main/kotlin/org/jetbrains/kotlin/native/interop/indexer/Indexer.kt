@@ -531,7 +531,7 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
             convertType(clang_getCursorType(cursor), clang_getDeclTypeAttributes(cursor))
 
     private inline fun objCType(supplier: () -> ObjCPointer) = when (library.language) {
-        Language.C -> UnsupportedType
+        Language.C, Language.CPP   -> UnsupportedType
         Language.OBJECTIVE_C -> supplier()
     }
 
@@ -985,7 +985,7 @@ println("indexDeclaration> [${clang_getCursorKindSpelling(cursor.kind).convertAn
         parameters += getFunctionParameters(cursor)
 
         val binaryName = when (library.language) {
-            Language.C, Language.OBJECTIVE_C -> clang_Cursor_getMangling(cursor).convertAndDispose()
+            Language.C, Language.CPP, Language.OBJECTIVE_C -> clang_Cursor_getMangling(cursor).convertAndDispose()
         }
 
         val definitionCursor = clang_getCursorDefinition(cursor)
