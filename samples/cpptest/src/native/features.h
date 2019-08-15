@@ -1,7 +1,29 @@
 
+
+struct OuterCStruct {
+	const int plainCField;
+	struct {
+		int innerCField;
+	};
+
+	struct Inner {
+	};
+	struct Inner innerImpl;
+
+#ifdef __cplusplus
+// Illegal C. ok in C++
+	typedef struct {
+	} NestedStructInnerT;
+	NestedStructInnerT nestedStructT;
+#endif
+};
+
+const int g_IntVal = 0;
+
+
 typedef int (*funT)(int);
-void foo( funT );
-void bar( int (*)(int) );
+void fooFuncParam( funT );
+void barFuncParam( int (*)(int) );
 
 
 template <typename T> struct TmplStruct {
@@ -146,7 +168,7 @@ private:
 	int iPriv;
 };
 
-CppTest bar(CppTest* s);
+CppTest funRetByValue(CppTest* s);
 
 CppTest* create();
 

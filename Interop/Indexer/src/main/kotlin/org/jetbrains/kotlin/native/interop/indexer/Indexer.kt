@@ -247,7 +247,7 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
                     }
 
                     else ->
-                        println("${clazz.decl.spelling}::${clang_getCursorSpelling(cursor).convertAndDispose()} of ${clang_getCursorKindSpelling(cursor.kind).convertAndDispose()}")
+                        println("visitClass> Skip ${clazz.decl.spelling}::${getCursorSpelling(cursor)} of ${cursor.kind.spelling}")
                 }
             }
             CXChildVisitResult.CXChildVisit_Continue
@@ -821,7 +821,8 @@ val nameS = getCursorSpelling(cursor)
 val type = clang_getCursorType(cursor)
 val typeS = clang_getTypeSpelling(type).convertAndDispose()
 val kindS = clang_getTypeKindSpelling(type.kind).convertAndDispose()
-println("indexDeclaration> [${clang_getCursorKindSpelling(cursor.kind).convertAndDispose()}] $nameS : $typeS \t$kindS \t$lang")
+val parent = info.semanticContainer!!.pointed.cursor
+println("indexDeclaration> [${cursor.kind.spelling}] $nameS : $typeS \t$kindS \t^ ${getCursorSpelling(parent.readValue())}/${parent.kind.spelling}")
 
         if (!this.library.includesDeclaration(cursor)) {
             return
