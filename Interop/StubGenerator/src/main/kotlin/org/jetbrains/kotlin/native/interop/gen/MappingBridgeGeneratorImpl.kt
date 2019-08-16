@@ -24,7 +24,8 @@ import org.jetbrains.kotlin.native.interop.indexer.*
  */
 class MappingBridgeGeneratorImpl(
         val declarationMapper: DeclarationMapper,
-        val simpleBridgeGenerator: SimpleBridgeGenerator
+        val simpleBridgeGenerator: SimpleBridgeGenerator,
+        val language: Language
 ) : MappingBridgeGenerator {
 
     override fun kotlinToNative(
@@ -109,7 +110,15 @@ class MappingBridgeGeneratorImpl(
                     val kniStructResult = "kniStructResult"
 
                     out("${unwrappedReturnType.decl.spelling} $kniStructResult = $nativeResult;")
-                    out("memcpy(${bridgeNativeValues.last()}, &$kniStructResult, sizeof($kniStructResult));")
+                    if (language == Language.CPP) {
+                        // use copy/move constructor to create object in place.
+                        out("new(${bridgeNativeValues.last()}) ${unwrappedReturnType.decl.spelling}($nativeResult);")
+                    } else {
+                        // TODO Consider assignment instead of memcpy (better for POD aka plain C struct
+                        out("memcpy(${bridgeNativeValues.last()}, &$kniStructResult, sizeof($kniStructResult));")
+                    }
+                    // if C++
+
                     ""
                 }
                 unwrappedReturnType is PointerType && unwrappedReturnType.isLVReference ->
