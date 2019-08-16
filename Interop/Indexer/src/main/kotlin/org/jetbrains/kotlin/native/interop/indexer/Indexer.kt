@@ -841,41 +841,31 @@ println("indexDeclaration> [${cursor.kind.spelling}] ${cursor.spelling} : ${curs
          * The same for CXCursor_FunctionDecl vs CXCursor_FunctionTemplate
          */
         when (kind) {
-            CXIdxEntity_Struct, CXIdxEntity_Union -> {
+            CXIdxEntity_Struct, CXIdxEntity_Union, CXIdxEntity_CXXClass -> {
                 if (entityName == null) {
                     // Skip anonymous struct.
                     // (It gets included anyway if used as a named field type).
                 } else {
-                    if (clang_getCursorLanguage(cursor) != CXLanguageKind.CXLanguage_CPlusPlus)
-                    getStructDeclAt(cursor)
+                    if (library.language != Language.CPP) {
+                        getStructDeclAt(cursor)
+                    }
                 }
-            }
-
-            CXIdxEntity_CXXClass -> {
-                if (clang_getCursorLanguage(cursor) != CXLanguageKind.CXLanguage_CPlusPlus)
-                getStructDeclAt(cursor)
             }
 
             CXIdxEntity_Typedef, CXIdxEntity_CXXTypeAlias -> {
                 val type = clang_getCursorType(cursor)
                 getTypedef(type)
             }
-/*
+
             CXIdxEntity_Function -> {
-                if (isSuitableFunction(cursor)) {
-                    if (entityName?.take(8) == "operator") {
-                        // not implemented yet
-                    } else {
-                        val id = getDeclarationId(cursor)
-                        if (id is DeclarationID.USR)
-                            println("usr> ${getCursorSpelling(cursor)} \t${id.usr}")
-                        functionById.getOrPut(getDeclarationId(cursor)) {
-                            getFunction(cursor)
-                        }
+                if (isSuitableFunction(cursor)
+                        && library.language != Language.CPP) {
+                    functionById.getOrPut(getDeclarationId(cursor)) {
+                        getFunction(cursor)
                     }
                 }
             }
-*/
+
             CXIdxEntity_Enum -> {
                 getEnumDefAt(cursor)
             }
@@ -941,7 +931,38 @@ println("indexDeclaration> [${cursor.kind.spelling}] ${cursor.spelling} : ${curs
         }
     }
 
-    fun indexCxxFunction(cursor: CValue<CXCursor>) {
+    fun indexDeclaration(cursor: CValue<CXCursor>): Unit {
+        if (!library.includesDeclaration(cursor)) {
+            return
+        }
+
+        if (cursor.isRecursivelyPublic()) {
+            when (cursor.kind) {
+
+                CXCursorKind.CXCursor_ClassDecl, CXCursorKind.CXCursor_StructDecl, CXCursorKind.CXCursor_UnionDecl -> {
+                    if (library.language == Language.CPP) {
+                        if (cursor.spelling.isEmpty()) {
+                            // Skip anonymous struct.
+                            // (It gets included anyway if used as a named field type).
+                        } else {
+                            getStructDeclAt(cursor)
+                        }
+                    }
+                }
+
+                CXCursorKind.CXCursor_FunctionDecl -> {
+                    if (library.language == Language.CPP) {
+                        indexCxxFunction(cursor)
+                    }
+                }
+
+                else -> {
+                }
+            }
+        }
+    }
+
+    private fun indexCxxFunction(cursor: CValue<CXCursor>) {
         if (isSuitableFunction(cursor)) {
             if (getCursorSpelling(cursor).take(8) == "operator") {
                 // not implemented yet
@@ -951,10 +972,6 @@ println("indexDeclaration> [${cursor.kind.spelling}] ${cursor.spelling} : ${curs
                 }
             }
         }
-    }
-
-    fun indexCxxClass(cursor: CValue<CXCursor>) {
-        getStructDeclAt(cursor)
     }
 
     fun indexObjCClass(cursor: CValue<CXCursor>) {
@@ -1158,32 +1175,8 @@ private fun indexDeclarations(nativeIndex: NativeIndexImpl): CompilationWithPCH 
             })
 
             visitChildren(clang_getTranslationUnitCursor(translationUnit)) { cursor, _ ->
-                val file = getContainingFile(cursor)
-                if (file in headers && nativeIndex.library.includesDeclaration(cursor)) {
-                    val lang = clang_getCursorLanguage(cursor)
-                    val nameS = getCursorSpelling(cursor)
-                    val type = clang_getCursorType(cursor)
-                    val typeS = clang_getTypeSpelling(type).convertAndDispose()
-                    val kindS = clang_getTypeKindSpelling(type.kind).convertAndDispose()
-                    val definitionCursor = clang_getCursorDefinition(cursor)
-                    val theSame = clang_equalCursors(cursor, definitionCursor)
-                    val isDefNotNull = (clang_Cursor_isNull(definitionCursor) == 0)
-                    val isDefCursor = clang_isCursorDefinition(cursor)
-
-                    println("visitTypes> [${clang_getCursorKindSpelling(cursor.kind).convertAndDispose()}] \t$nameS : $typeS \t$kindS \t$lang")
-                //    println("visitTypes> [${clang_getCursorKindSpelling(cursor.kind).convertAndDispose()}] \t $nameS : $typeS.$kindS \tCursor(isDef=$isDefCursor, hasDef=$isDefNotNull, theSame=$theSame")
-
-                    if (cursor.isRecursivelyPublic()) {
-                        when (cursor.kind) {
-                            CXCursorKind.CXCursor_ClassDecl, CXCursorKind.CXCursor_StructDecl -> {
-                                if (clang_getCursorLanguage(cursor) == CXLanguageKind.CXLanguage_CPlusPlus)
-                                    nativeIndex.indexCxxClass(cursor)
-                            }
-                            CXCursorKind.CXCursor_FunctionDecl -> nativeIndex.indexCxxFunction(cursor)
-                            else -> {
-                            }
-                        }
-                    }
+                if (getContainingFile(cursor) in headers) {
+                    nativeIndex.indexDeclaration(cursor)
                 }
                 CXChildVisitResult.CXChildVisit_Recurse
             }
