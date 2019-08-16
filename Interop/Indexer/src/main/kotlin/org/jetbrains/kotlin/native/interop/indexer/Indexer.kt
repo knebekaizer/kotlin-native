@@ -816,9 +816,6 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
         val entityName = entityInfo.name?.toKString()
         val kind = entityInfo.kind
 
-val parent = info.semanticContainer!!.pointed.cursor
-println("indexDeclaration> [${cursor.kind.spelling}] ${cursor.spelling} : ${cursor.type.name} \t${cursor.type.kind.spelling} \t^ ${getCursorSpelling(parent.readValue())}/${parent.kind.spelling}")
-
         if (!this.library.includesDeclaration(cursor)) {
             return
         }
