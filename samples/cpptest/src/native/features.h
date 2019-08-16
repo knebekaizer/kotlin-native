@@ -12,6 +12,11 @@ struct OuterCStruct {
 		int innerCField;
 	};
 
+	union {
+		int innerUnionF1;
+		double innerUnionF2;
+	};
+
 	struct Inner {
 	};
 	struct Inner innerImpl;
@@ -44,8 +49,8 @@ template <class X> void tmplFunction(X x);
 
 //int funVariadic(const char* format, ...);
 
-#include <cstdarg>
-void appendVAList(const char format[], va_list);
+//#include <cstdarg>
+//void appendVAList(const char format[], va_list); // doesn't work
 
 
 int plainCFreeFunction();
