@@ -616,7 +616,7 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
                         if (convertedPointeeType == UnsupportedType) VoidType else convertedPointeeType,
                         pointeeIsConst = pointeeIsConst,
                         isLVReference = (kind == CXType_LValueReference),
-                        spelling = type.spelling
+                        spelling = type.name
                 )
             }
 
@@ -816,13 +816,8 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
         val entityName = entityInfo.name?.toKString()
         val kind = entityInfo.kind
 
-val lang = clang_getCursorLanguage(cursor)
-val nameS = getCursorSpelling(cursor)
-val type = clang_getCursorType(cursor)
-val typeS = clang_getTypeSpelling(type).convertAndDispose()
-val kindS = clang_getTypeKindSpelling(type.kind).convertAndDispose()
 val parent = info.semanticContainer!!.pointed.cursor
-println("indexDeclaration> [${cursor.kind.spelling}] $nameS : $typeS \t$kindS \t^ ${getCursorSpelling(parent.readValue())}/${parent.kind.spelling}")
+println("indexDeclaration> [${cursor.kind.spelling}] ${cursor.spelling} : ${cursor.type.name} \t${cursor.type.kind.spelling} \t^ ${getCursorSpelling(parent.readValue())}/${parent.kind.spelling}")
 
         if (!this.library.includesDeclaration(cursor)) {
             return

@@ -1,4 +1,10 @@
 
+class MyClass {
+};
+
+MyClass retByValue();
+
+
 
 struct OuterCStruct {
 	const int plainCField;
