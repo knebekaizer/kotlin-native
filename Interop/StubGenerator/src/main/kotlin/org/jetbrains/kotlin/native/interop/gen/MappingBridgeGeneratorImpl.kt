@@ -80,22 +80,33 @@ class MappingBridgeGeneratorImpl(
             val nativeValues = mutableListOf<String>()
             kotlinValues.forEachIndexed { index, (type, _) ->
                 val unwrappedType = type.unwrapTypedefs()
-                val cppRefTypePrefix = if (unwrappedType is PointerType && unwrappedType.isLVReference) "*" else ""
-                when {
-                    type is Typedef ->
-                        nativeValues.add("(${type.def.name})${bridgeNativeValues[index]}")
-                    type is PointerType && type.spelling != null ->
-                        nativeValues.add("(${type.spelling})${bridgeNativeValues[index]}")
-                    unwrappedType is EnumType ->
-                        nativeValues.add("(${unwrappedType.def.spelling})${bridgeNativeValues[index]}")
-                    unwrappedType is RecordType ->
-                        nativeValues.add("*(${unwrappedType.decl.spelling}*)${bridgeNativeValues[index]}")
-                    else ->
-                        nativeValues.add(cppRefTypePrefix +
-                                mirror(declarationMapper, type).info.cFromBridged(
-                                        bridgeNativeValues[index], scope, nativeBacked
-                                )
-                        )
+                if (unwrappedType is RecordType) {
+                    nativeValues.add("*(${unwrappedType.decl.spelling}*)${bridgeNativeValues[index]}")
+                } else if (language == Language.CPP) {
+                    // C++ is more restrictive wrt type conversion
+                    val cppRefTypePrefix = if (unwrappedType is PointerType && unwrappedType.isLVReference) "*" else ""
+                    when { /// TODO Move this cludge to mirror()
+                        type is Typedef ->
+                            nativeValues.add("(${type.def.name})${bridgeNativeValues[index]}")
+                        type is PointerType && type.spelling != null ->
+                            nativeValues.add("(${type.spelling})$cppRefTypePrefix${bridgeNativeValues[index]}")
+                        unwrappedType is EnumType ->
+                            nativeValues.add("(${unwrappedType.def.spelling})${bridgeNativeValues[index]}")
+                        unwrappedType is RecordType ->
+                            nativeValues.add("*(${unwrappedType.decl.spelling}*)${bridgeNativeValues[index]}")
+                        else ->
+                            nativeValues.add(cppRefTypePrefix +
+                                    mirror(declarationMapper, type).info.cFromBridged(
+                                            bridgeNativeValues[index], scope, nativeBacked
+                                    )
+                            )
+                    }
+                } else {
+                    nativeValues.add(
+                            mirror(declarationMapper, type).info.cFromBridged(
+                                    bridgeNativeValues[index], scope, nativeBacked
+                            )
+                    )
                 }
             }
 
@@ -113,7 +124,10 @@ class MappingBridgeGeneratorImpl(
                         // use copy/move constructor to create object in place.
                         out("new(${bridgeNativeValues.last()}) ${unwrappedReturnType.decl.spelling}($nativeResult);")
                     } else {
-                        out("*(${unwrappedReturnType.decl.spelling}*) ${bridgeNativeValues.last()} = $nativeResult;")
+                        out("${unwrappedReturnType.decl.spelling} $kniStructResult = $nativeResult;")
+                        out("memcpy(${bridgeNativeValues.last()}, &$kniStructResult, sizeof($kniStructResult));")
+                        //    The following would be better, but won't work in case of const fields: C99 6.3.2.1p1
+                        //    out("*(${unwrappedReturnType.decl.spelling}*) ${bridgeNativeValues.last()} = $nativeResult;")
                     }
                     ""
                 }
