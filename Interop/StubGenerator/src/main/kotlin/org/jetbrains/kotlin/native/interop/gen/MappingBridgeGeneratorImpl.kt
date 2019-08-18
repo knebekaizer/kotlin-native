@@ -109,16 +109,12 @@ class MappingBridgeGeneratorImpl(
                 unwrappedReturnType is RecordType -> {
                     val kniStructResult = "kniStructResult"
 
-                    out("${unwrappedReturnType.decl.spelling} $kniStructResult = $nativeResult;")
                     if (language == Language.CPP) {
                         // use copy/move constructor to create object in place.
                         out("new(${bridgeNativeValues.last()}) ${unwrappedReturnType.decl.spelling}($nativeResult);")
                     } else {
-                        // TODO Consider assignment instead of memcpy (better for POD aka plain C struct
-                        out("memcpy(${bridgeNativeValues.last()}, &$kniStructResult, sizeof($kniStructResult));")
+                        out("*(${unwrappedReturnType.decl.spelling}*) ${bridgeNativeValues.last()} = $nativeResult;")
                     }
-                    // if C++
-
                     ""
                 }
                 unwrappedReturnType is PointerType && unwrappedReturnType.isLVReference ->
