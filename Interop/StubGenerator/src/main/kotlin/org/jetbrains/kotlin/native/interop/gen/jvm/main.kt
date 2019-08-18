@@ -302,7 +302,7 @@ internal fun prepareTool(target: String?, flavor: KotlinPlatform): ToolConfig {
 }
 
 private fun isCxxOptions(opts: List<String>) : Boolean {
-    opts.reduce args@{prev, that ->
+    if (opts.size >= 2)  opts.reduce args@{ prev, that ->
         if (prev == "-x" && that == "c++") return@isCxxOptions true
         return@args that
     }
