@@ -246,13 +246,12 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
                         )
                     }
 
-                    else ->
-                        println("visitClass> Skip ${clazz.decl.spelling}::${getCursorSpelling(cursor)} of ${cursor.kind.spelling}")
+                    else -> {
+                    }
                 }
             }
             CXChildVisitResult.CXChildVisit_Continue
         }
-        clazz.methods.forEach { println("CxxMethod: ${clazz.decl.spelling}::${it.name}") }
     }
 
     private fun createStructDef(structDecl: StructDeclImpl, cursor: CValue<CXCursor>) {
@@ -1088,7 +1087,7 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
 
     // Skip functions which parameter or return type is TemplateRef
     private fun isFuncDeclEligible(cursor: CValue<CXCursor>): Boolean {
-    //    assert(cursor.kind == CXCursorKind.CXCursor_ParmDecl)
+
         var ret = true
         visitChildren(cursor) { cursor, _ ->
             when (cursor.kind) {

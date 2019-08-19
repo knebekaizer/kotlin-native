@@ -157,7 +157,7 @@ internal class StructStubBuilder(
                 classifier,
                 origin = StubOrigin.Struct(decl),
                 properties = fields.filterNotNull() + if (platform == KotlinPlatform.NATIVE) bitFields else emptyList(),
-                functions = methods, // emptyList(),
+                functions = methods,
                 modality = ClassStubModality.NONE,
                 annotations = listOfNotNull(structAnnotation),
                 superClassInit = superClassInit,
