@@ -80,6 +80,17 @@ internal class StructStubBuilder(
         }
         val classifier = context.getKotlinClassForPointed(decl)
 
+        var methods: List<FunctionStub> =
+            def.methods
+                    .filter { it.isCxxInstanceMethod }
+                    .map { func ->
+                        try {
+                            (FunctionStubBuilder(context, func).build() as List<FunctionStub>).single()
+                        } catch (e: Throwable) {
+                            null
+                        }
+                    }.filterNotNull()
+
         val fields: List<PropertyStub?> = def.fields.map { field ->
             try {
                 assert(field.name.isNotEmpty())
@@ -175,6 +186,7 @@ internal class StructStubBuilder(
         val companionSuper = superClass.nested("Type")
         val typeSize = listOf(IntegralConstantStub(def.size, 4, true), IntegralConstantStub(def.align.toLong(), 4, true))
         val companionSuperInit = SuperClassInit(companionSuper, typeSize)
+<<<<<<< HEAD
         val companionClassifier = classifier.nested("Companion")
         val annotation = AnnotationStub.CStruct.VarType(def.size, def.align).takeIf {
             context.generationMode == GenerationMode.METADATA
@@ -184,13 +196,35 @@ internal class StructStubBuilder(
                 superClassInit = companionSuperInit,
                 annotations = listOfNotNull(annotation, AnnotationStub.Deprecated.deprecatedCVariableCompanion)
         )
+=======
+
+        var classMethods: List<FunctionStub> =
+                def.methods
+                        .filter { !it.isCxxInstanceMethod }
+                        .map { func ->
+                            try {
+                                (FunctionStubBuilder(context, func).build() as List<FunctionStub>).single()
+                            } catch (e: Throwable) {
+                                null
+                            }
+                        }.filterNotNull()
+        val classFields = def.staticFields
+                .map { field -> (GlobalStubBuilder(context, field).build() as List<PropertyStub>).single() }
+        val companion = ClassStub.Companion(companionSuperInit,
+                properties = classFields,
+                functions = classMethods)
+>>>>>>> ecb997130... Limited C++ interop provided via plain C wrappers and cinterop mechanism.
 
         return listOf(ClassStub.Simple(
                 classifier,
                 origin = origin,
                 properties = fields.filterNotNull() + if (platform == KotlinPlatform.NATIVE) bitFields else emptyList(),
+<<<<<<< HEAD
                 constructors = listOf(primaryConstructor),
                 methods = emptyList(),
+=======
+                functions = methods,
+>>>>>>> ecb997130... Limited C++ interop provided via plain C wrappers and cinterop mechanism.
                 modality = ClassStubModality.NONE,
                 annotations = listOfNotNull(structAnnotation),
                 superClassInit = superClassInit,
@@ -625,6 +659,7 @@ internal class GlobalStubBuilder(
         val kind: PropertyStub.Kind
         if (unwrappedType is ArrayType) {
             kotlinType = (mirror as TypeMirror.ByValue).valueType
+<<<<<<< HEAD
             val getter = when (context.platform) {
                 KotlinPlatform.JVM -> {
                     PropertyAccessor.Getter.SimpleGetter().also {
@@ -639,11 +674,17 @@ internal class GlobalStubBuilder(
                     }
                 }
             }
+=======
+            val getter = PropertyAccessor.Getter.SimpleGetter()
+            val extra = BridgeGenerationComponents.GlobalGetterBridgeInfo(global.fullName, mirror.info, isArray = true)
+            context.bridgeComponentsBuilder.getterToBridgeInfo[getter] = extra
+>>>>>>> ecb997130... Limited C++ interop provided via plain C wrappers and cinterop mechanism.
             kind = PropertyStub.Kind.Val(getter)
         } else {
             when (mirror) {
                 is TypeMirror.ByValue -> {
                     kotlinType = mirror.argType
+<<<<<<< HEAD
                     val getter = when (context.platform) {
                         KotlinPlatform.JVM -> {
                             PropertyAccessor.Getter.SimpleGetter().also {
@@ -675,11 +716,23 @@ internal class GlobalStubBuilder(
                                 }
                             }
                         }
+=======
+                    val getter = PropertyAccessor.Getter.SimpleGetter()
+                    val getterExtra = BridgeGenerationComponents.GlobalGetterBridgeInfo(global.fullName, mirror.info, isArray = false)
+                    context.bridgeComponentsBuilder.getterToBridgeInfo[getter] = getterExtra
+                    kind = if (global.isConst) {
+                        PropertyStub.Kind.Val(getter)
+                    } else {
+                        val setter = PropertyAccessor.Setter.SimpleSetter()
+                        val setterExtra = BridgeGenerationComponents.GlobalSetterBridgeInfo(global.fullName, mirror.info)
+                        context.bridgeComponentsBuilder.setterToBridgeInfo[setter] = setterExtra
+>>>>>>> ecb997130... Limited C++ interop provided via plain C wrappers and cinterop mechanism.
                         PropertyStub.Kind.Var(getter, setter)
                     }
                 }
                 is TypeMirror.ByRef -> {
                     kotlinType = mirror.pointedType
+<<<<<<< HEAD
                     val getter = when (context.generationMode) {
                         GenerationMode.SOURCE_CODE -> {
                             PropertyAccessor.Getter.InterpretPointed(global.name, kotlinType.toStubIrType())
@@ -691,6 +744,9 @@ internal class GlobalStubBuilder(
                             }
                         }
                     }
+=======
+                    val getter = PropertyAccessor.Getter.InterpretPointed(global.fullName, WrapperStubType(kotlinType))
+>>>>>>> ecb997130... Limited C++ interop provided via plain C wrappers and cinterop mechanism.
                     kind = PropertyStub.Kind.Val(getter)
                 }
             }
