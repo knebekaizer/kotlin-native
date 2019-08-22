@@ -1,0 +1,33 @@
+language = C++
+compilerOpts = -std=c++14
+
+
+---
+
+namespace ns {
+
+class CppTest {
+public:
+	explicit CppTest(int m) : n(m) {}
+	int n = 11;
+	virtual int get() const { return n; }
+	virtual void set(int m) { n = m; }
+};
+
+typedef CppTest CppType;
+using CppClass = CppTest;
+
+CppClass retByValue(int k) { return CppClass(k); }
+CppType* retByPtr(int k) { return new CppType(k); } // Leak is intentional
+CppTest& retByRef(int k) { return * new CppTest(k); } // Leak is intentional
+
+int paramByValue(CppClass x) { return x.get(); }
+int paramByPtr(CppType* x) { return x? x->get() : 0; }
+int paramByRef(CppTest& x) { return x.get(); }
+
+enum Enum { one, two };
+Enum foo(Enum x) {  return x; }
+
+int varInNS = 0;
+
+}

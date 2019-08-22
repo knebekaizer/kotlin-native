@@ -87,7 +87,7 @@ class MappingBridgeGeneratorImpl(
                     val cppRefTypePrefix = if (unwrappedType is PointerType && unwrappedType.isLVReference) "*" else ""
                     when { /// TODO Move this cludge to mirror()
                         type is Typedef ->
-                            nativeValues.add("(${type.def.name})${bridgeNativeValues[index]}")
+                            nativeValues.add("(${type.def.fullName})${bridgeNativeValues[index]}")
                         type is PointerType && type.spelling != null ->
                             nativeValues.add("(${type.spelling})$cppRefTypePrefix${bridgeNativeValues[index]}")
                         unwrappedType is EnumType ->

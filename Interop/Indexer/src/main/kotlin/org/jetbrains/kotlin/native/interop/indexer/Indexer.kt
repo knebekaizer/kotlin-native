@@ -486,10 +486,14 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
 
         if (underlying == UnsupportedType) return underlying
 
-        if (clang_getCursorLexicalParent(declCursor).kind != CXCursorKind.CXCursor_TranslationUnit) {
-            // Objective-C type parameters are represented as non-top-level typedefs.
-            // Erase for now:
-            return underlying
+        val parent = clang_getCursorLexicalParent(declCursor)
+        println("getTypedef> parent [${parent.kind.spelling}] ${parent.spelling} : ${parent.type.name} \t${parent.type.kind.spelling}")
+        if (library.language == Language.OBJECTIVE_C) {
+            if (clang_getCursorLexicalParent(declCursor).kind != CXCursorKind.CXCursor_TranslationUnit) {
+                // Objective-C type parameters are represented as non-top-level typedefs.
+                // Erase for now:
+                return underlying
+            }
         }
 
         if (library.language == Language.OBJECTIVE_C) {
@@ -506,8 +510,6 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
             }
         }
 
-
-
         if ((underlying is RecordType && underlying.decl.spelling.split(' ').last() == name) ||
                 (underlying is EnumType && underlying.def.spelling.split(' ').last() == name)) {
 
@@ -520,7 +522,7 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
 
         val typedefDef = typedefRegistry.getOrPut(declCursor) {
 
-            TypedefDef(underlying, name, getLocation(declCursor))
+            TypedefDef(underlying, name, getLocation(declCursor), parentName = getParentName(declCursor))
         }
 
         return Typedef(typedefDef)

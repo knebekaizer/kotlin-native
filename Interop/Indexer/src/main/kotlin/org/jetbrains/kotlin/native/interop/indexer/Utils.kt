@@ -279,7 +279,7 @@ internal fun Appendable.appendPreamble(compilation: Compilation) = this.apply {
  */
 internal fun Compilation.createTempSource(): File {
     val result = createTempFile(suffix = ".${language.sourceFileExtension}")
-    result.deleteOnExit()
+//    result.deleteOnExit()
 
     result.bufferedWriter().use { writer ->
         writer.appendPreamble(this)
@@ -342,6 +342,7 @@ internal fun CXTranslationUnit.getErrorLineNumbers(): Sequence<Int> =
         getDiagnostics().filter {
             it.isError()
         }.map {
+println(it.format)
             memScoped {
                 val lineNumberVar = alloc<IntVar>()
                 clang_getFileLocation(it.location, null, lineNumberVar.ptr, null, null)
@@ -391,6 +392,7 @@ fun List<List<String>>.mapFragmentIsCompilable(originalLibrary: CompilationWithP
                 if (fragmentsToCheck.isNotEmpty()) {
                     // The first fragment is now known to be non-compilable.
                     val firstFragment = fragmentsToCheck.removeAt(0)
+firstFragment.value.forEach { println(it) }
                     indicesOfNonCompilable.add(firstFragment.index)
                 }
 

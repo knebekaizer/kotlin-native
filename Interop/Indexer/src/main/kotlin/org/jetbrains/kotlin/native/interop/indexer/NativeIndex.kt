@@ -282,7 +282,10 @@ class Namespace(val name: String, val parent: String? = null) {
  * typedef $aliased $name;
  * ```
  */
-class TypedefDef(val aliased: Type, val name: String, override val location: Location) : TypeDeclaration
+class TypedefDef(val aliased: Type, val name: String, override val location: Location, val parentName: String? = null) : TypeDeclaration {
+    val fullName: String = parentName?.let { "$it::$name" } ?: name
+}
+
 
 abstract class MacroDef(val name: String)
 
