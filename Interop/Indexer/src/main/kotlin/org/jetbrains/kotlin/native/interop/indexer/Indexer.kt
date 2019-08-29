@@ -819,13 +819,6 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
             return
         }
 
-        val namespace: Namespace? =
-        // semantic parent of any namespace member is always namespace itself (no type aliases etc)
-            if (info.semanticContainer!!.pointed.cursor.kind == CXCursorKind.CXCursor_Namespace) {
-                val parent = info.semanticContainer!!.pointed.cursor.readValue()
-                Namespace(getCursorSpelling(parent), getParentName(parent))
-            } else null
-
         if (!cursor.isRecursivelyPublic()) {
             // c++ : skip anon namespaces, static functions and variables and private inner classes
             return
@@ -1175,6 +1168,13 @@ private fun indexDeclarations(nativeIndex: NativeIndexImpl): CompilationWithPCH 
                     nativeIndex.indexDeclaration(cursor)
                 }
                 CXChildVisitResult.CXChildVisit_Recurse
+            }
+
+            if (nativeIndex.library.language == Language.CPP) {
+                val tree = TreeParser(clang_getTranslationUnitCursor(translationUnit))
+
+                val log = RenderLog()
+                tree.accept(log).flush().forEach { println(it) }
             }
 
             visitChildren(clang_getTranslationUnitCursor(translationUnit)) { cursor, _ ->

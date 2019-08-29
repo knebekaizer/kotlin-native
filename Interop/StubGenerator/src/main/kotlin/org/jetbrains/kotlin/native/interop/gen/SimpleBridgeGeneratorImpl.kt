@@ -149,6 +149,7 @@ class SimpleBridgeGeneratorImpl(
         val nativeBridge = NativeBridge(kotlinLines, nativeLines)
         nativeBridges.add(nativeBacked to nativeBridge)
 
+nativeLines.forEach { println(it )}
         return callExpr
     }
 

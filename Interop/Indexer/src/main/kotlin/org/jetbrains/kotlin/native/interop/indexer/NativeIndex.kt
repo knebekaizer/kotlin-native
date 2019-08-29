@@ -270,10 +270,6 @@ class FunctionDecl(val name: String, val parameters: List<Parameter>, val return
     val cxxReceiverClass: StructDecl? = cxxMethod?. let { (this.cxxMethod.receiverType.pointeeType as RecordType).decl }
 }
 
-class Namespace(val name: String, val parent: String? = null) {
-    val fullName: String = parent?.let { "$parent::$name" } ?: name
-}
-
 
 /**
  * C typedef definition.
