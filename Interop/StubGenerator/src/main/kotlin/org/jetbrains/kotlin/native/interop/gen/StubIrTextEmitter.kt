@@ -221,7 +221,6 @@ class StubIrTextEmitter(
             element.annotations.forEach {
                 out(renderAnnotation(it))
             }
-
             val parameters = (if (element.isCxxInstanceMember()) element.parameters.drop(1) else element.parameters).
                     joinToString(prefix = "(", postfix = ")") { renderFunctionParameter(it) }
             val receiver = element.receiver?.let { renderFunctionReceiver(it) + "." } ?: ""

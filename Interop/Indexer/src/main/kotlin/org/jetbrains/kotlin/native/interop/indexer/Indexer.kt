@@ -1088,7 +1088,7 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
 
     // Skip functions which parameter or return type is TemplateRef
     private fun isFuncDeclEligible(cursor: CValue<CXCursor>): Boolean {
-    //    assert(cursor.kind == CXCursorKind.CXCursor_ParmDecl)
+
         var ret = true
         visitChildren(cursor) { cursor, _ ->
             when (cursor.kind) {
