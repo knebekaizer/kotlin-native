@@ -2,7 +2,6 @@ package org.jetbrains.kotlin.native.interop.indexer
 
 import clang.*
 import kotlinx.cinterop.*
-import clang.CXTypeKind
 import clang.CXCursorKind
 
 
@@ -42,8 +41,14 @@ class CxxMethod(data: Entity, parent: Container) : Function(data, parent) {
 
 }
 
-class CxxClass(data: Entity, parent: Container) : Container(data, parent) {
+class Field_(data: Entity, parent: Container) : Node(data, parent) {
+}
 
+class Var(data: Entity, parent: Container) : Node(data, parent) {
+}
+
+class CxxClass(data: Entity, parent: Container) : Container(data, parent) {
+    override val name: String get() = data.typeName
 }
 
 class Namespace(data: Entity, parent: Container) : Container(data, parent) {
@@ -65,21 +70,21 @@ struct Enum;
 
 interface Render {
 //    fun render(x: Node): Render
-    fun renderNode(x: Node): Render
-    fun renderContainer(x: Container): Render
+    fun renderNode(node: Node): Render
+    fun renderContainer(container: Container): Render
     fun flush(): List<String>
 }
 
 class RenderLog : Render {
-    override fun renderNode(c: Node): Render {
+    override fun renderNode(node: Node): Render {
         val prefix = (List(indent) {"    "}).joinToString("")
-        lines.add( "$prefix.${c.name} : ${c.kindSpelling}" )
+        lines.add( "$prefix.${node.name} : ${node.kindSpelling}" )
         return this
     }
 
-    override fun renderContainer(c: Container): Render {
-        renderNode(c); // prolog
-        c.children.forEach {
+    override fun renderContainer(container: Container): Render {
+        renderNode(container); // prolog
+        container.children.forEach {
             indent += 1
             it.accept(this)
             indent -= 1
@@ -93,6 +98,7 @@ class RenderLog : Render {
     private var indent: Int = 0
     private val lines: MutableList<String> = mutableListOf()
 }
+
 
 class TreeParser(root: CValue<CXCursor>) : Container(root.data(), null) {
 
@@ -135,7 +141,8 @@ class TreeParser(root: CValue<CXCursor>) : Container(root.data(), null) {
             }
 
             CXCursorKind.CXCursor_CXXMethod -> {
-                // TODO
+                val x = CxxMethod(entity, parent)
+                parent.add(x)
             }
 
             CXCursorKind.CXCursor_Constructor -> {
@@ -146,16 +153,15 @@ class TreeParser(root: CValue<CXCursor>) : Container(root.data(), null) {
                 // TODO
             }
 
-            CXCursorKind.CXCursor_VarDecl -> {
-                // TODO
-            }
+            CXCursorKind.CXCursor_VarDecl ->
+                parent.add(Var(entity, parent))
 
             CXCursorKind.CXCursor_EnumDecl -> {
                 // TODO
             }
 
             CXCursorKind.CXCursor_FieldDecl -> {
-                // TODO
+                parent.add(Field_(entity, parent))
             }
 
             else -> {

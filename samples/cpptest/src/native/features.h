@@ -82,7 +82,7 @@ UnknownT* cFunUnknownParams(const UnknownT*);
 struct ForwardT;  // declaratuin
 ForwardT* cFunForwardParams(const ForwardT*);  // decl
 
-struct ForwardT {}; // definition
+struct ForwardT { int forwardT_member; }; // definition
 ForwardT* cFunForwardParams(const ForwardT*) { // def
 	return new ForwardT();
 }
