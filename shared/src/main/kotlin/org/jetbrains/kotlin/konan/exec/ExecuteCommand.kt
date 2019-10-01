@@ -48,6 +48,7 @@ open class Command(initialCommand: List<String>) {
     }
 
     open fun runProcess(): Int {
+println("runProcess> ${command.joinToString(" ")}")
         val builder = ProcessBuilder(command)
 
         builder.redirectOutput(Redirect.INHERIT)

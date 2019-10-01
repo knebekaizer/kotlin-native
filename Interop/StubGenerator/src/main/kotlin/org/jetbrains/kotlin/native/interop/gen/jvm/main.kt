@@ -159,6 +159,7 @@ private fun findFilesByGlobs(roots: List<Path>, globs: List<String>): Map<Path, 
 
 
 private fun processCLib(args: Array<String>, additionalArgs: Map<String, Any> = mapOf()): Array<String> {
+    println("processLib> args = ${args.joinToString(" ")}, additionalArgs = $additionalArgs")
     val cinteropArguments = CInteropArguments()
     cinteropArguments.argParser.parse(args)
     val ktGenRoot = cinteropArguments.generated

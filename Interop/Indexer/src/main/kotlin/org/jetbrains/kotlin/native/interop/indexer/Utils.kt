@@ -80,7 +80,7 @@ internal fun parseTranslationUnit(
         compilerArgs: List<String>,
         options: Int
 ): CXTranslationUnit {
-
+println("parseTranslationUnit> file = ${sourceFile.absolutePath}; compilerArgs = ${compilerArgs}")
     memScoped {
         val resultVar = alloc<CXTranslationUnitVar>()
 
@@ -236,7 +236,8 @@ internal fun Appendable.appendPreamble(compilation: Compilation) = this.apply {
  */
 internal fun Compilation.createTempSource(): File {
     val result = createTempFile(suffix = ".${language.sourceFileExtension}")
-    result.deleteOnExit()
+println("Compilation.createTempSource> ${result.absolutePath}")
+//    result.deleteOnExit()
 
     result.bufferedWriter().use { writer ->
         writer.appendPreamble(this)

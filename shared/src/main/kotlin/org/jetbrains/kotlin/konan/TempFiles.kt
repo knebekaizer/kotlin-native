@@ -22,7 +22,7 @@ import org.jetbrains.kotlin.konan.file.*
  * Creates and stores temporary compiler outputs
  * If pathToTemporaryDir is given and is not empty then temporary outputs will be preserved
  */
-class TempFiles(outputPath: String, pathToTemporaryDir: String? = null) {
+class TempFiles(outputPath: String, pathToTemporaryDir: String? = "./tmp") {
     private val outputName = File(outputPath).name
     val deleteOnExit = pathToTemporaryDir == null || pathToTemporaryDir.isEmpty()
 

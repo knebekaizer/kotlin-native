@@ -24,10 +24,17 @@ internal class BitcodeCompiler(val context: Context) {
         addAll(elements.filter { !it.isEmpty() })
     }
 
-    private fun runTool(vararg command: String) =
-            Command(*command)
-                    .logWith(context::log)
-                    .execute()
+    private fun logX(message: () -> String) {
+            println(message())
+    }
+
+    private fun runTool(vararg command: String) {
+println("runTool> ${command.toList<String>()}" )
+        Command(*command)
+        .logWith( ::logX ) // .logWith(context::log) //
+        .execute()
+}
+
 
     private fun temporary(name: String, suffix: String): String =
             context.config.tempFiles.create(name, suffix).absolutePath
@@ -71,29 +78,33 @@ internal class BitcodeCompiler(val context: Context) {
             else -> llcFlags.llcNooptFlags
         } + llvmProfilingFlags()).toTypedArray()
         val combinedO = temporary("llc_output", ".o")
-        hostLlvmTool("llc", bitcodeFile, "-o", combinedO, *flags, "-filetype=obj")
+        hostLlvmTool("llc", "-asm-verbose", bitcodeFile, "-o", combinedO, *flags, "-filetype=obj")
         return combinedO
     }
 
     private fun bitcodeToWasm(configurables: WasmConfigurables, file: BitcodeFile): String {
+println("bitcodeToWasm> optFlags = ${configurables.optFlags.joinToString(" ")}")
+println("bitcodeToWasm> llcFlags = ${configurables.llcFlags.joinToString(" ")}")
+println("bitcodeToWasm> lldFlags = ${configurables.lldFlags.joinToString(" ")}")
         val optimizedBc = opt(configurables, file)
         val compiled = llc(configurables, optimizedBc)
 
         // TODO: should be moved to linker.
         val linkedWasm = temporary("linked", ".wasm")
-        hostLlvmTool("wasm-ld", compiled, "-o", linkedWasm, *configurables.lldFlags.toTypedArray())
+        hostLlvmTool("wasm-ld", "--verbose", compiled, "-o", linkedWasm, *configurables.lldFlags.toTypedArray())
 
         return linkedWasm
     }
 
     private fun optAndLlc(configurables: ZephyrConfigurables, file: BitcodeFile): String {
+println("optAndLlc>")
         val optimizedBc = temporary("optimized", ".bc")
         val optFlags = llvmProfilingFlags() + listOf("-O3", "-internalize", "-globaldce")
-        hostLlvmTool("opt", file, "-o=$optimizedBc", *optFlags.toTypedArray())
+        hostLlvmTool("opt", "-v", file, "-o=$optimizedBc", *optFlags.toTypedArray())
 
         val combinedO = temporary("combined", ".o")
         val llcFlags = llvmProfilingFlags() + listOf("-function-sections", "-data-sections")
-        hostLlvmTool("llc", optimizedBc, "-filetype=obj", "-o", combinedO, *llcFlags.toTypedArray())
+        hostLlvmTool("llc", "-v", optimizedBc, "-filetype=obj", "-o", combinedO, *llcFlags.toTypedArray())
 
         return combinedO
     }

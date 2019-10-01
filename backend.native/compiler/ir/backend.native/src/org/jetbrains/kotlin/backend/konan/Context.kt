@@ -441,7 +441,7 @@ internal class Context(config: KonanConfig) : KonanBackendContext(config) {
 
     override var inVerbosePhase = false
     override fun log(message: () -> String) {
-        if (inVerbosePhase) {
+        if (inVerbosePhase) { //  inVerbosePhase
             println(message())
         }
     }
