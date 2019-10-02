@@ -224,7 +224,7 @@ println("K2Native.doExecute>")
     companion object {
         @JvmStatic fun main(args: Array<String>) {
             profile("Total compiler main()") {
-                println("main> K2Native() with args = ${args.joinToString(" ")}")
+                println("K2Native main> args = ${args.joinToString(" ")}")
                 CLITool.doMain(K2Native(), args)
             }
         }

@@ -33,8 +33,7 @@ println("runTool> ${command.toList<String>()}" )
         Command(*command)
         .logWith( ::logX ) // .logWith(context::log) //
         .execute()
-}
-
+    }
 
     private fun temporary(name: String, suffix: String): String =
             context.config.tempFiles.create(name, suffix).absolutePath

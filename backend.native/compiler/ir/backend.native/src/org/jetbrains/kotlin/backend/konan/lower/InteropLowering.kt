@@ -56,6 +56,7 @@ internal abstract class BaseInteropIrTransformer(private val context: Context) :
             createKotlinStubs(element).block()
 
     protected fun createKotlinStubs(element: IrElement?): KotlinStubs {
+        println("BaseInteropIrTransformer.createKotlinStubs>")
         val location = if (element != null) {
             element.getCompilerMessageLocation(irFile)
         } else {

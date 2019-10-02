@@ -461,8 +461,11 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
         return Typedef(typedefDef)
     }
 
-    private fun convertCursorType(cursor: CValue<CXCursor>) =
-            convertType(clang_getCursorType(cursor), clang_getDeclTypeAttributes(cursor))
+    private fun convertCursorType(cursor: CValue<CXCursor>) : Type {
+            val ret = convertType(clang_getCursorType(cursor), clang_getDeclTypeAttributes(cursor))
+//if (ret == UnsupportedType) println("convertCursorType> Unsupported ${cursor.spelling} : ${cursor.type.name} of ${cursor.kind.spelling}")
+        return ret
+    }
 
     private inline fun objCType(supplier: () -> ObjCPointer) = when (library.language) {
         Language.C -> UnsupportedType
@@ -609,7 +612,16 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
 
             CXType_BlockPointer -> objCType { convertBlockPointerType(type, typeAttributes) }
 
-            else -> UnsupportedType
+
+            CXType_Vector -> {
+            //    println("convertType> UnsupportedType ${kind.spelling}<${clang_getElementType(type).kind.spelling}>")
+                UnsupportedType
+            }
+
+            else -> {
+            //    println("convertType> UnsupportedType ${kind.spelling}")
+                UnsupportedType
+            }
         }
     }
 
@@ -860,6 +872,17 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
         val returnType = convertType(clang_getCursorResultType(cursor), clang_getCursorResultTypeAttributes(cursor))
 
         val parameters = getFunctionParameters(cursor)
+//if (returnType == UnsupportedType || parameters.any { it.type == UnsupportedType }) {
+//    println("getFunction> Unsupported function $name")
+//    if (returnType == UnsupportedType) println("    UnsupportedRetType: ${clang_getCursorResultType(cursor).name}")
+//    val argNum = clang_Cursor_getNumArguments(cursor)
+//    val args = (0..argNum - 1).map {
+//        val argCursor = clang_Cursor_getArgument(cursor, it)
+//        val argName = getCursorSpelling(argCursor)
+//        val type = convertCursorType(argCursor)
+//        if (type == UnsupportedType) println("    UnsupportedArgType: ${argCursor.type.name}")
+//    }
+//}
 
         val binaryName = when (library.language) {
             Language.C, Language.OBJECTIVE_C -> clang_Cursor_getMangling(cursor).convertAndDispose()
@@ -890,6 +913,7 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
         val parameters = getFunctionParameters(cursor)
 
         if (returnType == UnsupportedType || parameters.any { it.type == UnsupportedType }) {
+            println("getObjCMethod> Unsupported $selector")
             return null // TODO: make a more universal fix.
         }
 
