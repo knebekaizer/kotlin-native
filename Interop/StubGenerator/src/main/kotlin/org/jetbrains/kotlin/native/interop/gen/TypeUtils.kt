@@ -16,6 +16,7 @@
 
 package org.jetbrains.kotlin.native.interop.gen
 
+import kotlinx.cinterop.toCValues
 import org.jetbrains.kotlin.native.interop.indexer.*
 
 val EnumDef.isAnonymous: Boolean
@@ -30,7 +31,7 @@ val StructDecl.isAnonymous: Boolean
  *
  * TODO: use libclang to implement?
  */
-fun Type.getStringRepresentation(): String = when (this) {
+fun Type.getStringRepresentation(): String  = when (this) {
     VoidType -> "void"
     CharType -> "char"
     CBoolType -> "_Bool"
@@ -38,6 +39,7 @@ fun Type.getStringRepresentation(): String = when (this) {
     is IntegerType -> this.spelling
     is FloatingType -> this.spelling
 
+    is VectorType -> "vFloat" // getPointerTypeStringRepresentation(this.elemType)
     is PointerType -> getPointerTypeStringRepresentation(this.pointeeType)
     is ArrayType -> getPointerTypeStringRepresentation(this.elemType)
 
@@ -67,7 +69,8 @@ fun getPointerTypeStringRepresentation(pointee: Type): String =
 
 private fun getStringRepresentationOfPointee(type: Type): String? {
     val unwrapped = type.unwrapTypedefs()
-
+    val y = floatArrayOf(1f, 2f, 3f, 4f)
+    y.toCValues()
     return when (unwrapped) {
         is PrimitiveType -> unwrapped.getStringRepresentation()
         is PointerType -> getStringRepresentationOfPointee(unwrapped.pointeeType)?.plus("*")

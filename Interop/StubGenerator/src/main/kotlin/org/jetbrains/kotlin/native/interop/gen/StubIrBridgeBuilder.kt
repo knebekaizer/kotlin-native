@@ -6,9 +6,7 @@ package org.jetbrains.kotlin.native.interop.gen
 
 import org.jetbrains.kotlin.native.interop.gen.SimpleBridgeGeneratorImpl.Companion.INVALID_CLANG_IDENTIFIER_REGEX
 import org.jetbrains.kotlin.native.interop.gen.jvm.KotlinPlatform
-import org.jetbrains.kotlin.native.interop.indexer.ObjCProtocol
-import org.jetbrains.kotlin.native.interop.indexer.VoidType
-import org.jetbrains.kotlin.native.interop.indexer.unwrapTypedefs
+import org.jetbrains.kotlin.native.interop.indexer.*
 import org.jetbrains.kotlin.utils.addToStdlib.firstIsInstanceOrNull
 
 class BridgeBuilderResult(
@@ -142,7 +140,7 @@ class StubIrBridgeBuilder(
 
                     val returnType = function.returnType.getStringRepresentation()
                     val parameters = function.parameters.mapIndexed { index, parameter ->
-                        "p$index" to parameter.type.getStringRepresentation()
+                        "q$index" to parameter.type.getStringRepresentation()
                     }
                     val callExpression = "${function.name}(${parameters.joinToString { it.first }});"
                     val wrapperBody = if (function.returnType.unwrapTypedefs() is VoidType) {

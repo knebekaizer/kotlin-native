@@ -288,7 +288,7 @@ fun Compilation.precompileHeaders(): CompilationWithPCH = withIndex { index ->
 }
 
 internal fun Compilation.withPrecompiledHeader(translationUnit: CXTranslationUnit): CompilationWithPCH {
-    val precompiledHeader = createTempFile(suffix = ".pch").apply { this.deleteOnExit() }
+    val precompiledHeader = createTempFile(suffix = ".pch") // .apply { this.deleteOnExit() }
     clang_saveTranslationUnit(translationUnit, precompiledHeader.absolutePath, 0)
 
     return CompilationWithPCH(this.compilerArgs, precompiledHeader.absolutePath, this.language)
@@ -306,6 +306,7 @@ internal fun CXTranslationUnit.getErrorLineNumbers(): Sequence<Int> =
         getDiagnostics().filter {
             it.isError()
         }.map {
+println("E>\t${it.format}")
             memScoped {
                 val lineNumberVar = alloc<IntVar>()
                 clang_getFileLocation(it.location, null, lineNumberVar.ptr, null, null)
@@ -323,6 +324,7 @@ fun List<List<String>>.mapFragmentIsCompilable(originalLibrary: CompilationWithP
     val indicesOfNonCompilable = mutableSetOf<Int>()
 
     val fragmentsToCheck = this.withIndex().toMutableList()
+fragmentsToCheck.forEach { println("\t${it.value.joinToString("\n\t")}") }
 
     withIndex(excludeDeclarationsFromPCH = true) { index ->
         val sourceFile = library.createTempSource()
@@ -355,6 +357,7 @@ fun List<List<String>>.mapFragmentIsCompilable(originalLibrary: CompilationWithP
                 if (fragmentsToCheck.isNotEmpty()) {
                     // The first fragment is now known to be non-compilable.
                     val firstFragment = fragmentsToCheck.removeAt(0)
+firstFragment.value.forEach { println(it) }
                     indicesOfNonCompilable.add(firstFragment.index)
                 }
 
@@ -740,7 +743,7 @@ fun createVfsOverlayFile(virtualPathToReal: Map<Path, Path>): Path {
         bufferedWriter().use {
             writeBytes(bytes)
         }
-        deleteOnExit()
+    //    deleteOnExit()
     }.toPath()
 }
 

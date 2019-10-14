@@ -75,7 +75,7 @@ private class KotlinToCCallBuilder(
     val cFunctionBuilder = CFunctionBuilder()
 
     fun init() {
-        println("KotlinToCCallBuilder>")
+        println("KotlinToCCallBuilder.ctor>")
     }
 }
 
@@ -552,6 +552,7 @@ internal fun KotlinStubs.generateCFunctionAndFakeKotlinExternalFunction(
         isObjCMethod: Boolean,
         location: IrElement
 ): IrSimpleFunction {
+println("KotlinStubs.generateCFunctionAndFakeKotlinExternalFunction> ${function.name.asString()}")
     val cFunction = generateCFunction(function, signature, isObjCMethod, location)
     return createFakeKotlinExternalFunction(signature, cFunction, isObjCMethod)
 }

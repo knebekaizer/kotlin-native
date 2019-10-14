@@ -17,6 +17,7 @@
 package org.jetbrains.kotlin.native.interop.gen
 
 import org.jetbrains.kotlin.native.interop.indexer.RecordType
+import org.jetbrains.kotlin.native.interop.indexer.VectorType
 import org.jetbrains.kotlin.native.interop.indexer.Type
 import org.jetbrains.kotlin.native.interop.indexer.VoidType
 import org.jetbrains.kotlin.native.interop.indexer.unwrapTypedefs
@@ -79,6 +80,8 @@ class MappingBridgeGeneratorImpl(
                 val unwrappedType = type.unwrapTypedefs()
                 if (unwrappedType is RecordType) {
                     nativeValues.add("*(${unwrappedType.decl.spelling}*)${bridgeNativeValues[index]}")
+                } else if (unwrappedType is VectorType) {
+                    nativeValues.add("*(vFloat*)${bridgeNativeValues[index]}")
                 } else {
                     nativeValues.add(
                             mirror(declarationMapper, type).info.cFromBridged(

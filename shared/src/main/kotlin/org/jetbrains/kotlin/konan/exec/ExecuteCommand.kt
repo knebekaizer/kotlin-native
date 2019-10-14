@@ -48,7 +48,7 @@ open class Command(initialCommand: List<String>) {
     }
 
     open fun runProcess(): Int {
-println("runProcess> ${command.joinToString(" ")}")
+println("Command.runProcess> ${command.joinToString(" ")}")
         val builder = ProcessBuilder(command)
 
         builder.redirectOutput(Redirect.INHERIT)
@@ -75,9 +75,11 @@ println("runProcess> ${command.joinToString(" ")}")
 
     fun getResult(withErrors: Boolean, handleError: Boolean = false): Result {
         log()
+println("Command.getResult> ${command.joinToString(" ")}")
 
         val outputFile = createTempFile()
-        outputFile.deleteOnExit()
+   //     outputFile.deleteOnExit()
+println("Command.getResult> outputFile = ${outputFile.absolutePath}")
 
         try {
             val builder = ProcessBuilder(command)

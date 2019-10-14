@@ -614,8 +614,14 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
 
 
             CXType_Vector -> {
-            //    println("convertType> UnsupportedType ${kind.spelling}<${clang_getElementType(type).kind.spelling}>")
-                UnsupportedType
+                val elementType = convertType(clang_getElementType(type))
+                val size = clang_Type_getSizeOf(type)
+                val elemSize = clang_Type_getSizeOf(clang_getElementType(type))
+            //    VectorType(elementType, length)
+                val length = size / elemSize
+                println("convertType> VectorType ${kind.spelling}<$elementType> size = $size, elemSize = $elemSize, length = $length")
+                VectorType(elementType, length)
+            //    UnsupportedType
             }
 
             else -> {

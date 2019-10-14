@@ -103,7 +103,7 @@ private fun createKotlinBridge(
         stubs: KotlinStubs,
         isExternal: Boolean
 ): IrFunctionImpl {
-    println("KotlinBridgeBuilder.createKotlinBridge> $cBridgeName")
+    println("KotlinBridgeBuilder.build->createKotlinBridge> $cBridgeName")
 
     val bridgeDescriptor = WrappedSimpleFunctionDescriptor()
     val bridge = IrFunctionImpl(

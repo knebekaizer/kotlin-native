@@ -17,6 +17,9 @@ package org.jetbrains.kotlin.konan
 
 import org.jetbrains.kotlin.konan.file.File
 import org.jetbrains.kotlin.konan.file.*
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.attribute.FileAttribute
 
 /**
  * Creates and stores temporary compiler outputs
@@ -55,8 +58,10 @@ class TempFiles(outputPath: String, pathToTemporaryDir: String? = "./tmp") {
      * Create file named {name}{suffix} inside temporary dir
      */
     fun create(prefix: String, suffix: String = ""): File =
-            File(dir, "$prefix$suffix").also {
-                if (deleteOnExit) it.deleteOnExit()
+            Files.createTempFile(Path.of(dir.absolutePath), prefix, suffix).File().also {
+        //    File(dir, "$prefix$suffix").also {
+            //    if (deleteOnExit) it.deleteOnExit()
+                println("TempFiles.create> ${it.absolutePath}")
             }
 }
 
