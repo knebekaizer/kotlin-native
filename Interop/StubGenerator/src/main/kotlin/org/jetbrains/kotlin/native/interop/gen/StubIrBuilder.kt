@@ -317,6 +317,7 @@ class StubIrBuilder(private val context: StubIrContext) {
         try {
             addStubs(FunctionStubBuilder(buildingContext, func).build())
         } catch (e: Throwable) {
+            println(e.printStackTrace())
             context.log("Warning: cannot generate stubs for function ${func.name}")
         }
     }

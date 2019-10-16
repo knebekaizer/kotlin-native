@@ -234,10 +234,14 @@ println("KotlinCallBuilder.build> ${function.name.asString()}")
 internal class CCallBuilder {
     val arguments = mutableListOf<String>()
 
-    fun build(function: String) = buildString {
-        append(function)
-        append('(')
-        arguments.joinTo(this)
-        append(')')
+    fun build(function: String) : String {
+        val ret = buildString {
+            append(function)
+            append('(')
+            arguments.joinTo(this)
+            append(')')
+        }
+        println("CCallBuilder.build> $ret")
+        return ret
     }
 }

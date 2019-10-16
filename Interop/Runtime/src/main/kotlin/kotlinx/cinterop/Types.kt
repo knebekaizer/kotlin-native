@@ -254,6 +254,20 @@ sealed class CPrimitiveVar(rawPtr: NativePtr) : CVariable(rawPtr) {
     open class Type(size: Int) : CVariable.Type(size.toLong(), align = size)
 }
 
+public class VectorVar(rawPtr: NativePtr) : CStructVar(rawPtr) {
+    companion object : Type(16, 16)
+    val v: CArrayPointer<FloatVar>
+        get() = arrayMemberAt(0)
+}
+
+//public class VectorF4(rawPtr: NativePtr) : VectorVar(rawPtr) {
+//    companion object : Type(16)
+//    fun asArray(): CArrayPointer<FloatVar> {
+//        return interpretCPointer<FloatVar>(this.rawPtr)!!
+//    }
+//    fun set(index: Int, value: Float)
+//}
+
 public interface CEnum {
     public val value: Any
 }

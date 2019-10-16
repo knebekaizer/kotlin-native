@@ -81,7 +81,7 @@ class MappingBridgeGeneratorImpl(
                 if (unwrappedType is RecordType) {
                     nativeValues.add("*(${unwrappedType.decl.spelling}*)${bridgeNativeValues[index]}")
                 } else if (unwrappedType is VectorType) {
-                    nativeValues.add("*(vFloat*)${bridgeNativeValues[index]}")
+                    nativeValues.add("DEAD CODE HERE*(vFloat*)${bridgeNativeValues[index]}")
                 } else {
                     nativeValues.add(
                             mirror(declarationMapper, type).info.cFromBridged(

@@ -127,6 +127,13 @@ class StubIrBridgeBuilder(
             )
         }
 
+        private fun castToNative(type: Type): String =
+                when (type) {
+                    is Typedef -> castToNative(type.def.aliased)
+                    is VectorType -> "*(vFloat*)"
+                    else -> ""
+                }
+
         /**
          * Some functions don't have an address (e.g. macros-based or builtins).
          * To solve this problem we generate a wrapper function.
@@ -140,9 +147,14 @@ class StubIrBridgeBuilder(
 
                     val returnType = function.returnType.getStringRepresentation()
                     val parameters = function.parameters.mapIndexed { index, parameter ->
-                        "q$index" to parameter.type.getStringRepresentation()
+                        "p$index" to parameter.type.getStringRepresentation()
                     }
-                    val callExpression = "${function.name}(${parameters.joinToString { it.first }});"
+                    val paramList = function.parameters.mapIndexed { index, parameter ->
+                         "${castToNative(parameter.type)}p$index"
+                    }
+                    val callExpression = "${function.name}(${paramList.joinToString(", ")});"
+
+                //    val callExpression = "${function.name}(${parameters.joinToString { it.first }});"
                     val wrapperBody = if (function.returnType.unwrapTypedefs() is VoidType) {
                         callExpression
                     } else {

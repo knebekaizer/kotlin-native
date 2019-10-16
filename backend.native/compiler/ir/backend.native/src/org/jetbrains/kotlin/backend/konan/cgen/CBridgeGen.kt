@@ -653,7 +653,7 @@ private fun KotlinToCCallBuilder.mapCalleeFunctionParameter(
         argument: IrExpression
 ): KotlinToCArgumentPassing {
     val classifier = type.classifierOrNull
-    return when {
+    val ret =  when {
         classifier == symbols.interopCValues || // Note: this should not be accepted, but is required for compatibility
                 classifier == symbols.interopCValuesRef -> CValuesRefArgumentPassing
 
@@ -676,6 +676,7 @@ private fun KotlinToCCallBuilder.mapCalleeFunctionParameter(
                 location = TypeLocation.FunctionArgument(argument)
         )
     }
+    return ret
 }
 
 private fun KotlinStubs.mapFunctionParameterType(
@@ -766,57 +767,60 @@ private fun KotlinStubs.mapType(
         variadic: Boolean,
         typeLocation: TypeLocation,
         reportUnsupportedType: (String) -> Nothing
-): ValuePassing = when {
-    type.isBoolean() -> BooleanValuePassing(
-            cBoolType(target) ?: reportUnsupportedType("unavailable on target platform"),
-            irBuiltIns
-    )
-
-    type.isByte() -> TrivialValuePassing(irBuiltIns.byteType, CTypes.signedChar)
-    type.isShort() -> TrivialValuePassing(irBuiltIns.shortType, CTypes.short)
-    type.isInt() -> TrivialValuePassing(irBuiltIns.intType, CTypes.int)
-    type.isLong() -> TrivialValuePassing(irBuiltIns.longType, CTypes.longLong)
-    type.isFloat() -> TrivialValuePassing(irBuiltIns.floatType, CTypes.float)
-    type.isDouble() -> TrivialValuePassing(irBuiltIns.doubleType, CTypes.double)
-    type.classifierOrNull == symbols.interopCPointer -> TrivialValuePassing(type, CTypes.voidPtr)
-    type.isTypeOfNullLiteral() && variadic  -> TrivialValuePassing(symbols.interopCPointer.typeWithStarProjections.makeNullable(), CTypes.voidPtr)
-    type.isUByte() -> UnsignedValuePassing(type, CTypes.signedChar, CTypes.unsignedChar)
-    type.isUShort() -> UnsignedValuePassing(type, CTypes.short, CTypes.unsignedShort)
-    type.isUInt() -> UnsignedValuePassing(type, CTypes.int, CTypes.unsignedInt)
-    type.isULong() -> UnsignedValuePassing(type, CTypes.longLong, CTypes.unsignedLongLong)
-
-    type.isCEnumType() -> {
-        val enumClass = type.getClass()!!
-        val value = enumClass.declarations
-            .filterIsInstance<IrProperty>()
-            .single { it.name.asString() == "value" }
-
-        CEnumValuePassing(
-                enumClass,
-                value,
-                mapType(value.getter!!.returnType, retained, variadic, typeLocation) as SimpleValuePassing
+): ValuePassing  {
+    val ret = when {
+        type.isBoolean() -> BooleanValuePassing(
+                cBoolType(target) ?: reportUnsupportedType("unavailable on target platform"),
+                irBuiltIns
         )
+
+        type.isByte() -> TrivialValuePassing(irBuiltIns.byteType, CTypes.signedChar)
+        type.isShort() -> TrivialValuePassing(irBuiltIns.shortType, CTypes.short)
+        type.isInt() -> TrivialValuePassing(irBuiltIns.intType, CTypes.int)
+        type.isLong() -> TrivialValuePassing(irBuiltIns.longType, CTypes.longLong)
+        type.isFloat() -> TrivialValuePassing(irBuiltIns.floatType, CTypes.float)
+        type.isDouble() -> TrivialValuePassing(irBuiltIns.doubleType, CTypes.double)
+        type.classifierOrNull == symbols.interopCPointer -> TrivialValuePassing(type, CTypes.voidPtr)
+        type.isTypeOfNullLiteral() && variadic  -> TrivialValuePassing(symbols.interopCPointer.typeWithStarProjections.makeNullable(), CTypes.voidPtr)
+        type.isUByte() -> UnsignedValuePassing(type, CTypes.signedChar, CTypes.unsignedChar)
+        type.isUShort() -> UnsignedValuePassing(type, CTypes.short, CTypes.unsignedShort)
+        type.isUInt() -> UnsignedValuePassing(type, CTypes.int, CTypes.unsignedInt)
+        type.isULong() -> UnsignedValuePassing(type, CTypes.longLong, CTypes.unsignedLongLong)
+
+        type.isCEnumType() -> {
+            val enumClass = type.getClass()!!
+            val value = enumClass.declarations
+                    .filterIsInstance<IrProperty>()
+                    .single { it.name.asString() == "value" }
+
+            CEnumValuePassing(
+                    enumClass,
+                    value,
+                    mapType(value.getter!!.returnType, retained, variadic, typeLocation) as SimpleValuePassing
+            )
+        }
+
+        type.classifierOrNull == symbols.interopCValue -> if (type.isNullable()) {
+            reportUnsupportedType("must not be nullable")
+        } else {
+            val kotlinClass = (type as IrSimpleType).arguments.singleOrNull()?.typeOrNull?.getClass()
+                    ?: reportUnsupportedType("must be parameterized with concrete class")
+
+            StructValuePassing(kotlinClass, getNamedCStructType(kotlinClass)
+                    ?: reportUnsupportedType("not a structure or too complex"))
+        }
+
+        type.isFunction() -> if (variadic){
+            reportUnsupportedType("not supported as variadic argument")
+        } else {
+            mapBlockType(type, retained = retained, location = typeLocation)
+        }
+
+        isObjCReferenceType(type) -> ObjCReferenceValuePassing(symbols, type, retained = retained)
+
+        else -> reportUnsupportedType("doesn't correspond to any C type")
     }
-
-    type.classifierOrNull == symbols.interopCValue -> if (type.isNullable()) {
-        reportUnsupportedType("must not be nullable")
-    } else {
-        val kotlinClass = (type as IrSimpleType).arguments.singleOrNull()?.typeOrNull?.getClass()
-                ?: reportUnsupportedType("must be parameterized with concrete class")
-
-        StructValuePassing(kotlinClass, getNamedCStructType(kotlinClass)
-                ?: reportUnsupportedType("not a structure or too complex"))
-    }
-
-    type.isFunction() -> if (variadic){
-        reportUnsupportedType("not supported as variadic argument")
-    } else {
-        mapBlockType(type, retained = retained, location = typeLocation)
-    }
-
-    isObjCReferenceType(type) -> ObjCReferenceValuePassing(symbols, type, retained = retained)
-
-    else -> reportUnsupportedType("doesn't correspond to any C type")
+    return ret
 }
 
 private fun KotlinStubs.isObjCReferenceType(type: IrType): Boolean {
@@ -960,6 +964,69 @@ private class BooleanValuePassing(override val cType: CType, private val irBuilt
     override fun bridgedToC(expression: String): String = cType.cast(expression)
 
     override fun cToBridged(expression: String): String = cBridgeType.cast(expression)
+}
+
+//private class VectorTypePassing(private val kotlinClass: IrClass, override val cType: CType) :  ValuePassing {
+private class VectorTypePassing(private val kotlinClass: IrClass, val cType: CType) : KotlinToCArgumentPassing {
+    override fun KotlinToCCallBuilder.passValue(expression: IrExpression): CExpression {
+        val cBridgeValue = passThroughBridge(
+                cValuesRefToPointer(expression),
+                symbols.interopCPointer.typeWithStarProjections,
+                CTypes.pointer(cType)
+        ).name
+
+        return CExpression("*$cBridgeValue", cType)
+    }
+
+/*
+    override fun KotlinToCCallBuilder.returnValue(expression: String): IrExpression = with(irBuilder) {
+        cFunctionBuilder.setReturnType(cType)
+        bridgeBuilder.setReturnType(context.irBuiltIns.unitType, CTypes.void)
+
+        val kotlinPointed = scope.createTemporaryVariable(irCall(symbols.interopAllocType.owner).apply {
+            extensionReceiver = bridgeCallBuilder.getMemScope()
+            putValueArgument(0, getTypeObject())
+        })
+
+        bridgeCallBuilder.prepare += kotlinPointed
+
+        val cPointer = passThroughBridge(irGet(kotlinPointed), kotlinPointedType, CTypes.pointer(cType))
+        cBridgeBodyLines += "*${cPointer.name} = $expression;"
+
+        buildKotlinBridgeCall {
+            irBlock {
+                at(it)
+                +it
+                +readCValue(irGet(kotlinPointed), symbols)
+            }
+        }
+    }
+
+    override fun CCallbackBuilder.receiveValue(): IrExpression = with(bridgeBuilder.kotlinIrBuilder) {
+        val cParameter = cFunctionBuilder.addParameter(cType)
+        val kotlinPointed = passThroughBridge("&${cParameter.name}", CTypes.voidPtr, kotlinPointedType)
+
+        readCValue(irGet(kotlinPointed), symbols)
+    }
+
+    override fun CCallbackBuilder.returnValue(expression: IrExpression) = with(bridgeBuilder.kotlinIrBuilder) {
+        bridgeBuilder.setReturnType(irBuiltIns.unitType, CTypes.void)
+        cFunctionBuilder.setReturnType(cType)
+
+        val result = "callbackResult"
+        val cReturnValue = CVariable(cType, result)
+        cBodyLines += "$cReturnValue;"
+        val kotlinPtr = passThroughBridge("&$result", CTypes.voidPtr, symbols.nativePtrType)
+
+        kotlinBridgeStatements += irCall(symbols.interopCValueWrite.owner).apply {
+            extensionReceiver = expression
+            putValueArgument(0, irGet(kotlinPtr))
+        }
+        val cBridgeCall = buildCBridgeCall()
+        cBodyLines += "$cBridgeCall;"
+        cBodyLines += "return $result;"
+    }
+*/
 }
 
 private class StructValuePassing(private val kotlinClass: IrClass, override val cType: CType) : ValuePassing {
