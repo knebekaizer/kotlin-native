@@ -246,6 +246,13 @@ public abstract class CStructVar(rawPtr: NativePtr) : CVariable(rawPtr) {
     open class Type(size: Long, align: Int) : CVariable.Type(size, align)
 }
 
+//@Suppress("FINAL_UPPER_BOUND")
+//public class VectorVarOf<T : NativeVector>(rawPtr: NativePtr) : CPrimitiveVar(rawPtr) {
+//    companion object : Type(16)
+//}
+//public typealias VectorVar = VectorVarOf<NativeVector>
+//public class VectorVar
+
 /**
  * The C primitive-typed variable located in memory.
  */
@@ -253,20 +260,6 @@ sealed class CPrimitiveVar(rawPtr: NativePtr) : CVariable(rawPtr) {
     // aligning by size is obviously enough
     open class Type(size: Int) : CVariable.Type(size.toLong(), align = size)
 }
-
-public class VectorVar(rawPtr: NativePtr) : CStructVar(rawPtr) {
-    companion object : Type(16, 16)
-    val v: CArrayPointer<FloatVar>
-        get() = arrayMemberAt(0)
-}
-
-//public class VectorF4(rawPtr: NativePtr) : VectorVar(rawPtr) {
-//    companion object : Type(16)
-//    fun asArray(): CArrayPointer<FloatVar> {
-//        return interpretCPointer<FloatVar>(this.rawPtr)!!
-//    }
-//    fun set(index: Int, value: Float)
-//}
 
 public interface CEnum {
     public val value: Any
@@ -409,6 +402,14 @@ public var <T : Float> FloatVarOf<T>.value: T
 public var <T : Double> DoubleVarOf<T>.value: T
     get() = nativeMemUtils.getDouble(this) as T
     set(value) = nativeMemUtils.putDouble(this, value)
+
+
+//
+//@Suppress("FINAL_UPPER_BOUND")
+//public class VectorVarOf<T : NativeVector>(rawPtr: NativePtr) : CPrimitiveVar(rawPtr) {
+//    companion object : Type(16)
+//}
+//public typealias VectorVar = VectorVarOf<NativeVector>
 
 
 public class CPointerVarOf<T : CPointer<*>>(rawPtr: NativePtr) : CVariable(rawPtr) {
