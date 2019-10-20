@@ -403,13 +403,40 @@ public var <T : Double> DoubleVarOf<T>.value: T
     get() = nativeMemUtils.getDouble(this) as T
     set(value) = nativeMemUtils.putDouble(this, value)
 
+/*
+public class NativeVector internal constructor(@PublishedApi internal val value: NonNullNativePtr) : CValuesRef<T>() {
 
-//
-//@Suppress("FINAL_UPPER_BOUND")
-//public class VectorVarOf<T : NativeVector>(rawPtr: NativePtr) : CPrimitiveVar(rawPtr) {
-//    companion object : Type(16)
-//}
-//public typealias VectorVar = VectorVarOf<NativeVector>
+    // TODO: replace by [value].
+    @Suppress("NOTHING_TO_INLINE")
+    public inline val rawValue: NativePtr get() = value.toNativePtr()
+
+    public override fun equals(other: Any?): Boolean {
+        if (this === other) {
+            return true // fast path
+        }
+
+        return (other is CPointer<*>) && (rawValue == other.rawValue)
+    }
+
+    public override fun hashCode(): Int {
+        return rawValue.hashCode()
+    }
+
+    public override fun toString() = this.cPointerToString()
+
+    public override fun getPointer(scope: AutofreeScope) = this
+}
+*/
+
+public class NativeVector private constructor() {
+
+}
+
+    //@Suppress("FINAL_UPPER_BOUND")
+public class VectorVarOf<T : NativeVector>(rawPtr: NativePtr) : CPrimitiveVar(rawPtr) {
+    companion object : Type(16)
+}
+public typealias VectorVar = VectorVarOf<NativeVector>
 
 
 public class CPointerVarOf<T : CPointer<*>>(rawPtr: NativePtr) : CVariable(rawPtr) {

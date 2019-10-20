@@ -224,6 +224,8 @@ internal class Context(config: KonanConfig) : KonanBackendContext(config) {
         builtIns.builtInsModule.getPackage(KonanFqNames.packageName).memberScope.getContributedFunctions("immutableBlobOf").single()
     }
 
+ //   val nativeVector by lazy { packageScope.getContributedClassifier("NativeVector") as ClassDescriptor }
+
     val specialDeclarationsFactory = SpecialDeclarationsFactory(this)
 
     open class LazyMember<T>(val initializer: Context.() -> T) {

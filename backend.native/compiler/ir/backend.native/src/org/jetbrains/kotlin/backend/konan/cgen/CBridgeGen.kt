@@ -761,6 +761,41 @@ private fun KotlinStubs.mapType(type: IrType, retained: Boolean, variadic: Boole
 private fun IrType.isTypeOfNullLiteral(): Boolean = this is IrSimpleType && hasQuestionMark
         && classifier.isClassWithFqName(KotlinBuiltIns.FQ_NAMES.nothing)
 
+private fun IrType.isVector(): Boolean {
+    if (this is IrSimpleType) {
+        val cls = classifier
+        val r = cls.isClassWithFqName(KotlinBuiltIns.FQ_NAMES.nothing)
+        if (cls is IrClassSymbol) {
+            println("this is IrClassSymbol")
+            val symbol: IrClassSymbol = cls
+            if (symbol.isBound)  {
+                val fqName = KotlinBuiltIns.FQ_NAMES.nothing
+                val declaration = symbol.owner
+                val shortName = fqName.shortName()
+                val declFqName = declaration.fqNameWhenAvailable?.toUnsafe()
+                println(declFqName)
+            } else {
+                val name = symbol.descriptor.name
+            //    val descFqName = getFqName(symbol.descriptor)
+               // classFqNameEquals(symbol.descriptor, fqName)
+            }
+//
+//            private fun classFqNameEquals(declaration: IrClass, fqName: FqNameUnsafe): Boolean =
+//                    declaration.name == fqName.shortName() && fqName == declaration.fqNameWhenAvailable?.toUnsafe()
+//
+//            private fun classFqNameEquals(descriptor: ClassDescriptor, fqName: FqNameUnsafe): Boolean =
+//                    descriptor.name == fqName.shortName() && fqName == getFqName(descriptor)
+//
+//            val fqName == this.fqNameWhenAvailable?.toUnsafe()
+
+        }
+        val fqName = FqName("kotlinx.cinterop.NativeVector").toUnsafe()
+        val ret = classifier.isClassWithFqName(fqName)
+        return ret
+    }
+    return false
+}
+
 private fun KotlinStubs.mapType(
         type: IrType,
         retained: Boolean,
@@ -786,6 +821,8 @@ private fun KotlinStubs.mapType(
         type.isUShort() -> UnsignedValuePassing(type, CTypes.short, CTypes.unsignedShort)
         type.isUInt() -> UnsignedValuePassing(type, CTypes.int, CTypes.unsignedInt)
         type.isULong() -> UnsignedValuePassing(type, CTypes.longLong, CTypes.unsignedLongLong)
+
+        type.isVector() -> TrivialValuePassing(type, CTypes.vector16)
 
         type.isCEnumType() -> {
             val enumClass = type.getClass()!!
@@ -818,7 +855,8 @@ private fun KotlinStubs.mapType(
 
         isObjCReferenceType(type) -> ObjCReferenceValuePassing(symbols, type, retained = retained)
 
-        else -> reportUnsupportedType("doesn't correspond to any C type")
+        else ->
+            reportUnsupportedType("doesn't correspond to any C type")
     }
     return ret
 }
