@@ -48,6 +48,7 @@ internal class CFunctionBuilder {
     fun getType(): CType = CTypes.function(returnType, parameters.map { it.type }, variadic)
 
     fun buildSignature(name: String): String = returnType.render(buildString {
+println("CFunctionBuilder.buildSignature>")
         append(name)
         append('(')
         parameters.joinTo(this)
@@ -102,6 +103,7 @@ private fun createKotlinBridge(
         stubs: KotlinStubs,
         isExternal: Boolean
 ): IrFunctionImpl {
+    println("KotlinBridgeBuilder.build->createKotlinBridge> $cBridgeName")
     val bridgeDescriptor = WrappedSimpleFunctionDescriptor()
     val bridge = IrFunctionImpl(
             startOffset,
@@ -185,6 +187,7 @@ internal class KotlinCallBuilder(private val irBuilder: IrBuilderWithScope, priv
             function: IrFunction,
             transformCall: (IrMemberAccessExpression) -> IrExpression = { it }
     ): IrExpression {
+println("KotlinCallBuilder.build> ${function.name.asString()}")
         val arguments = this.arguments.toMutableList()
 
         val kotlinCall = irBuilder.irCall(function).run {
@@ -230,10 +233,14 @@ internal class KotlinCallBuilder(private val irBuilder: IrBuilderWithScope, priv
 internal class CCallBuilder {
     val arguments = mutableListOf<String>()
 
-    fun build(function: String) = buildString {
-        append(function)
-        append('(')
-        arguments.joinTo(this)
-        append(')')
+    fun build(function: String) : String {
+        val ret = buildString {
+            append(function)
+            append('(')
+            arguments.joinTo(this)
+            append(')')
+        }
+        println("CCallBuilder.build> $ret")
+        return ret
     }
 }

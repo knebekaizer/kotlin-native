@@ -107,6 +107,7 @@ class StubIrBridgeBuilder(
                 }
             } catch (e: Throwable) {
                 context.log("Warning: cannot generate bridge for ${element.name}.")
+                println(e.printStackTrace())
                 excludedStubs += element
             }
         }

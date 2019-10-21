@@ -30,6 +30,12 @@ internal val CValue<CXType>.kind: CXTypeKind get() = this.useContents { kind }
 
 internal val CValue<CXCursor>.kind: CXCursorKind get() = this.useContents { kind }
 
+internal val CValue<CXCursor>.type: CValue<CXType> get() = clang_getCursorType(this)
+internal val CValue<CXCursor>.spelling: String get() = clang_getCursorSpelling(this).convertAndDispose()
+internal val CValue<CXType>.name: String get() = clang_getTypeSpelling(this).convertAndDispose()
+internal val CXTypeKind.spelling: String get() = clang_getTypeKindSpelling(this).convertAndDispose()
+internal val CXCursorKind.spelling: String get() = clang_getCursorKindSpelling(this).convertAndDispose()
+
 internal fun CValue<CXString>.convertAndDispose(): String {
     try {
         return clang_getCString(this)!!.toKString()
@@ -80,7 +86,7 @@ internal fun parseTranslationUnit(
         compilerArgs: List<String>,
         options: Int
 ): CXTranslationUnit {
-
+println("parseTranslationUnit> file = ${sourceFile.absolutePath}; compilerArgs = ${compilerArgs}")
     memScoped {
         val resultVar = alloc<CXTranslationUnitVar>()
 
@@ -236,7 +242,8 @@ internal fun Appendable.appendPreamble(compilation: Compilation) = this.apply {
  */
 internal fun Compilation.createTempSource(): File {
     val result = createTempFile(suffix = ".${language.sourceFileExtension}")
-    result.deleteOnExit()
+println("Compilation.createTempSource> ${result.absolutePath}")
+//    result.deleteOnExit()
 
     result.bufferedWriter().use { writer ->
         writer.appendPreamble(this)
@@ -299,6 +306,7 @@ internal fun CXTranslationUnit.getErrorLineNumbers(): Sequence<Int> =
         getDiagnostics().filter {
             it.isError()
         }.map {
+println("E>\t${it.format}")
             memScoped {
                 val lineNumberVar = alloc<IntVar>()
                 clang_getFileLocation(it.location, null, lineNumberVar.ptr, null, null)
@@ -316,6 +324,7 @@ fun List<List<String>>.mapFragmentIsCompilable(originalLibrary: CompilationWithP
     val indicesOfNonCompilable = mutableSetOf<Int>()
 
     val fragmentsToCheck = this.withIndex().toMutableList()
+fragmentsToCheck.forEach { println("\t${it.value.joinToString("\n\t")}") }
 
     withIndex(excludeDeclarationsFromPCH = true) { index ->
         val sourceFile = library.createTempSource()
@@ -348,6 +357,7 @@ fun List<List<String>>.mapFragmentIsCompilable(originalLibrary: CompilationWithP
                 if (fragmentsToCheck.isNotEmpty()) {
                     // The first fragment is now known to be non-compilable.
                     val firstFragment = fragmentsToCheck.removeAt(0)
+firstFragment.value.forEach { println(it) }
                     indicesOfNonCompilable.add(firstFragment.index)
                 }
 
@@ -733,7 +743,7 @@ fun createVfsOverlayFile(virtualPathToReal: Map<Path, Path>): Path {
         bufferedWriter().use {
             writeBytes(bytes)
         }
-        deleteOnExit()
+    //    deleteOnExit()
     }.toPath()
 }
 

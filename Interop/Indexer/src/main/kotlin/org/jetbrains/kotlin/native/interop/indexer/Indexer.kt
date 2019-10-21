@@ -505,6 +505,7 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
     }
 
     fun convertType(type: CValue<CXType>, typeAttributes: CValue<CXTypeAttributes>? = null): Type {
+println("convertType> Type ${type.name} of kind ${type.kind.spelling}")
         val primitiveType = convertUnqualifiedPrimitiveType(type)
         if (primitiveType != UnsupportedType) {
             return primitiveType
@@ -609,7 +610,10 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
 
             CXType_BlockPointer -> objCType { convertBlockPointerType(type, typeAttributes) }
 
-            else -> UnsupportedType
+            else -> {
+                println("convertType> UnsupportedType ${kind.spelling}")
+                UnsupportedType
+            }
         }
     }
 
@@ -890,6 +894,7 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
         val parameters = getFunctionParameters(cursor)
 
         if (returnType == UnsupportedType || parameters.any { it.type == UnsupportedType }) {
+println("getObjCMethod> Unsupported $selector")
             return null // TODO: make a more universal fix.
         }
 
