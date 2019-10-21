@@ -762,6 +762,41 @@ private fun KotlinStubs.mapType(type: IrType, retained: Boolean, variadic: Boole
 private fun IrType.isTypeOfNullLiteral(): Boolean = this is IrSimpleType && hasQuestionMark
         && classifier.isClassWithFqName(KotlinBuiltIns.FQ_NAMES.nothing)
 
+private fun IrType.isVector(): Boolean {
+    if (this is IrSimpleType) {
+        val cls = classifier
+        val r = cls.isClassWithFqName(KotlinBuiltIns.FQ_NAMES.nothing)
+        if (cls is IrClassSymbol) {
+            println("this is IrClassSymbol")
+            val symbol: IrClassSymbol = cls
+            if (symbol.isBound)  {
+                val fqName = KotlinBuiltIns.FQ_NAMES.nothing
+                val declaration = symbol.owner
+                val shortName = fqName.shortName()
+                val declFqName = declaration.fqNameWhenAvailable?.toUnsafe()
+                println(declFqName)
+            } else {
+                val name = symbol.descriptor.name
+            //    val descFqName = getFqName(symbol.descriptor)
+               // classFqNameEquals(symbol.descriptor, fqName)
+            }
+//
+//            private fun classFqNameEquals(declaration: IrClass, fqName: FqNameUnsafe): Boolean =
+//                    declaration.name == fqName.shortName() && fqName == declaration.fqNameWhenAvailable?.toUnsafe()
+//
+//            private fun classFqNameEquals(descriptor: ClassDescriptor, fqName: FqNameUnsafe): Boolean =
+//                    descriptor.name == fqName.shortName() && fqName == getFqName(descriptor)
+//
+//            val fqName == this.fqNameWhenAvailable?.toUnsafe()
+
+        }
+        val fqName = FqName("kotlinx.cinterop.NativeVector").toUnsafe()
+        val ret = classifier.isClassWithFqName(fqName)
+        return ret
+    }
+    return false
+}
+
 private fun KotlinStubs.mapType(
         type: IrType,
         retained: Boolean,
@@ -968,6 +1003,69 @@ private class BooleanValuePassing(override val cType: CType, private val irBuilt
     override fun bridgedToC(expression: String): String = cType.cast(expression)
 
     override fun cToBridged(expression: String): String = cBridgeType.cast(expression)
+}
+
+//private class VectorTypePassing(private val kotlinClass: IrClass, override val cType: CType) :  ValuePassing {
+private class VectorTypePassing(private val kotlinClass: IrClass, val cType: CType) : KotlinToCArgumentPassing {
+    override fun KotlinToCCallBuilder.passValue(expression: IrExpression): CExpression {
+        val cBridgeValue = passThroughBridge(
+                cValuesRefToPointer(expression),
+                symbols.interopCPointer.typeWithStarProjections,
+                CTypes.pointer(cType)
+        ).name
+
+        return CExpression("*$cBridgeValue", cType)
+    }
+
+/*
+    override fun KotlinToCCallBuilder.returnValue(expression: String): IrExpression = with(irBuilder) {
+        cFunctionBuilder.setReturnType(cType)
+        bridgeBuilder.setReturnType(context.irBuiltIns.unitType, CTypes.void)
+
+        val kotlinPointed = scope.createTemporaryVariable(irCall(symbols.interopAllocType.owner).apply {
+            extensionReceiver = bridgeCallBuilder.getMemScope()
+            putValueArgument(0, getTypeObject())
+        })
+
+        bridgeCallBuilder.prepare += kotlinPointed
+
+        val cPointer = passThroughBridge(irGet(kotlinPointed), kotlinPointedType, CTypes.pointer(cType))
+        cBridgeBodyLines += "*${cPointer.name} = $expression;"
+
+        buildKotlinBridgeCall {
+            irBlock {
+                at(it)
+                +it
+                +readCValue(irGet(kotlinPointed), symbols)
+            }
+        }
+    }
+
+    override fun CCallbackBuilder.receiveValue(): IrExpression = with(bridgeBuilder.kotlinIrBuilder) {
+        val cParameter = cFunctionBuilder.addParameter(cType)
+        val kotlinPointed = passThroughBridge("&${cParameter.name}", CTypes.voidPtr, kotlinPointedType)
+
+        readCValue(irGet(kotlinPointed), symbols)
+    }
+
+    override fun CCallbackBuilder.returnValue(expression: IrExpression) = with(bridgeBuilder.kotlinIrBuilder) {
+        bridgeBuilder.setReturnType(irBuiltIns.unitType, CTypes.void)
+        cFunctionBuilder.setReturnType(cType)
+
+        val result = "callbackResult"
+        val cReturnValue = CVariable(cType, result)
+        cBodyLines += "$cReturnValue;"
+        val kotlinPtr = passThroughBridge("&$result", CTypes.voidPtr, symbols.nativePtrType)
+
+        kotlinBridgeStatements += irCall(symbols.interopCValueWrite.owner).apply {
+            extensionReceiver = expression
+            putValueArgument(0, irGet(kotlinPtr))
+        }
+        val cBridgeCall = buildCBridgeCall()
+        cBodyLines += "$cBridgeCall;"
+        cBodyLines += "return $result;"
+    }
+*/
 }
 
 private class StructValuePassing(private val kotlinClass: IrClass, override val cType: CType) : ValuePassing {

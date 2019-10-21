@@ -397,6 +397,17 @@ public var <T : Double> DoubleVarOf<T>.value: T
     set(value) = nativeMemUtils.putDouble(this, value)
 
 
+public class NativeVector private constructor() {
+
+}
+
+    //@Suppress("FINAL_UPPER_BOUND")
+public class VectorVarOf<T : NativeVector>(rawPtr: NativePtr) : CPrimitiveVar(rawPtr) {
+    companion object : Type(16)
+}
+public typealias VectorVar = VectorVarOf<NativeVector>
+
+
 public class CPointerVarOf<T : CPointer<*>>(rawPtr: NativePtr) : CVariable(rawPtr) {
     companion object : CVariable.Type(pointerSize.toLong(), pointerSize)
 }
