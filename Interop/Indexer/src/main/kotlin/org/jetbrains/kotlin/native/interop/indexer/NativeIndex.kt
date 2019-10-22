@@ -274,7 +274,7 @@ data class FloatingType(val size: Int, val spelling: String) : PrimitiveType
 data class VectorType(val elemType: Type, val length: Long) : PrimitiveType {
     // ex:  __attribute__((__vector_size__(4 * sizeof(const float)))) const float
     // val spelling = "${elemType.spelling} __attribute__ ((__vector_size__ (${length * elemType.size})))"
-    val spelling = "float __attribute__ ((__vector_size__ (8)))"
+    val spelling = "float __attribute__ ((__vector_size__ (16)))"
 }
 
 object VoidType : Type
