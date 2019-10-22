@@ -172,8 +172,9 @@ internal class RTTIGenerator(override val context: Context) : ContextUtils {
             LLVMFloatType()!! to 6,
             LLVMDoubleType()!! to 7,
             kInt8Ptr to 8,
-            LLVMInt1Type()!! to 9
-    )
+            LLVMInt1Type()!! to 9,
+            LLVMInt128Type()!! to 10
+            )
 
     private fun getInstanceSize(classType: LLVMTypeRef?, className: FqName) : Int {
         val elementType = arrayClasses.get(className.asString())

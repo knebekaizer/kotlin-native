@@ -1034,6 +1034,7 @@ internal class CAdapterGenerator(val context: Context) : DeclarationDescriptorVi
             KonanPrimitiveType.FLOAT -> "${prefix}_KFloat"
             KonanPrimitiveType.DOUBLE -> "${prefix}_KDouble"
             KonanPrimitiveType.NON_NULL_NATIVE_PTR -> "void*"
+            KonanPrimitiveType.NATIVE_VECTOR -> "${prefix}_KVector"
         }
     }
 

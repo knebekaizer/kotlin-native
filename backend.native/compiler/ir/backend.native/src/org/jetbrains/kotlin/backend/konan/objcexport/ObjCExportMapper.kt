@@ -207,6 +207,8 @@ private fun ObjCExportMapper.bridgeType(
                 KonanPrimitiveType.FLOAT -> ObjCValueType.FLOAT
                 KonanPrimitiveType.DOUBLE -> ObjCValueType.DOUBLE
                 KonanPrimitiveType.NON_NULL_NATIVE_PTR -> ObjCValueType.POINTER
+                KonanPrimitiveType.NATIVE_VECTOR -> ObjCValueType.LONG_LONG
+
             }
             ValueTypeBridge(objCValueType)
         },

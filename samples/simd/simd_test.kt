@@ -17,12 +17,16 @@ fun test_8() {
 //    println(len)
 //}
 
+//fun sendDouble(d1: Double, d2: Double) {
+//    val x = getDouble(d1, d2)
+//}
 
 fun main() {
 
 //    test_16()
     test_8()
 
-    val x = getDouble(42.0, 1.0)
+    val d1: Double = 42.0
+    setDouble(d1)
 
 }

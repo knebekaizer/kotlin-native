@@ -6,9 +6,9 @@
 
 //int foo(__int128_t);
 
-float getDouble(double, double);
+typedef double d16_t;
+void setDouble(d16_t);
 
-//typedef __attribute__((__ext_vector_type__(2))) float simd_float2; // doesn't work: not a native CXType_Vector
 typedef __attribute__ ((__vector_size__ (8))) float simdFloat2;
 simdFloat2 getSimd8(float f1, float f2);
 float length(simdFloat2);

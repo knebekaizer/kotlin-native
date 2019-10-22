@@ -23,6 +23,7 @@ private val primitiveToLlvm = PrimitiveBinaryType.values().associate {
         PrimitiveBinaryType.DOUBLE -> LLVMDoubleType()
 
         PrimitiveBinaryType.POINTER -> int8TypePtr
+        PrimitiveBinaryType.NATIVE_VECTOR -> LLVMInt128Type()
     }!!
 }
 

@@ -17,12 +17,16 @@ float length(simd_float2 f) {
     return len;
 }
 
+/*
+vFloat getVFloat(float f0, float f1, float f2, float f3) {
+	vFloat ret = {f0, f1, f2, f3};
+	__int128_t  i128 = (__int128_t)ret;
+	vFloat v = (vFloat) i128;
+	return ret;
+}
+*/
 
-//vFloat getVFloat(float f0, float f1, float f2, float f3) {
-//	vFloat ret = {f0, f1, f2, f3};
-//	return ret;
-//}
-//
+
 //float my_simd_distance(vFloat v1, vFloat v2) {
 //	fprintf(stderr, "v1(%f, %f, %f, %f)\n", v1[0], v1[1], v1[2], v1[3]);
 //	fprintf(stderr, "v2(%f, %f, %f, %f)\n", v2[0], v2[1], v2[2], v2[3]);
@@ -31,8 +35,9 @@ float length(simd_float2 f) {
 //	return dist;
 //}
 
-float getDouble(double x, double y) {
-	return x + y;
+void setDouble(double x) {
+	static double f;
+	f = x;
 }
 
 #ifdef MAIN
