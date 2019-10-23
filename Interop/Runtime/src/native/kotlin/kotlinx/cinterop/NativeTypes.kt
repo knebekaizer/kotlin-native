@@ -56,6 +56,11 @@ external fun CPointer<*>.getRawValue(): NativePtr
 
 internal fun CPointer<*>.cPointerToString() = "CPointer(raw=$rawValue)"
 
+
+@SymbolName("Kotlin_Vector_of")
+external fun vectorOf(f0: Float, f1: Float, f2: Float, f3: Float): NativeVector
+
+
 /**
  * Returns a pointer to C function which calls given Kotlin *static* function.
  *

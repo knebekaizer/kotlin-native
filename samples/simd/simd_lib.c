@@ -35,6 +35,12 @@ void printVFloat(vFloat v) {
 	fprintf(stderr, "vFloat(%f, %f, %f, %f)\n", v[0], v[1], v[2], v[3]);
 }
 
+void Kotlin_Vector_set(vFloat* thiz, uint32_t index, float value) {
+	if (index < 4) {
+		((float*)thiz)[index] = value;
+	}
+}
+
 void setDouble(double x) {
 	static double f;
 	f = x;

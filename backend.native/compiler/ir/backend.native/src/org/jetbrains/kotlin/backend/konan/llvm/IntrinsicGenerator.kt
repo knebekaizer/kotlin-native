@@ -1,6 +1,7 @@
 package org.jetbrains.kotlin.backend.konan.llvm
 
 import kotlinx.cinterop.cValuesOf
+import kotlinx.cinterop.toCValues
 import llvm.*
 import org.jetbrains.kotlin.backend.konan.RuntimeNames
 import org.jetbrains.kotlin.backend.konan.descriptors.getAnnotationValue
@@ -49,6 +50,7 @@ internal enum class IntrinsicType {
     REINTERPRET,
     ARE_EQUAL_BY_VALUE,
     IEEE_754_EQUALS,
+    VECTOR_OF,
     // OBJC
     OBJC_GET_MESSENGER,
     OBJC_GET_MESSENGER_STRET,
@@ -259,6 +261,7 @@ internal class IntrinsicGenerator(private val environment: IntrinsicGeneratorEnv
                 IntrinsicType.OBJC_GET_SELECTOR,
                 IntrinsicType.IMMUTABLE_BLOB ->
                     reportSpecialIntrinsic(intrinsicType)
+                IntrinsicType.VECTOR_OF -> emitVectorOf(callSite, args)
             }
 
     private fun reportSpecialIntrinsic(intrinsicType: IntrinsicType): Nothing =
@@ -704,4 +707,25 @@ internal class IntrinsicGenerator(private val environment: IntrinsicGeneratorEnv
         doubleType -> Float64(value.toDouble()).llvm
         else -> context.reportCompilationError("Unexpected primitive type: $type")
     }
+
+    private fun makeConstOfVectorType(values: List<LLVMValueRef>): LLVMValueRef {
+        // TODO check size and types, but only if LLVM returns null, to avoid double check on the fast path
+        return LLVMConstVector(values.toCValues(), values.size)!!
+    }
+
+    private fun FunctionGenerationContext.emitVectorOf(callSite: IrCall, args: List<LLVMValueRef>): LLVMValueRef {
+        return makeConstOfVectorType(args)
+    }
+
+/*
+    when (type) {
+        int8Type -> Int8(value.toByte()).llvm
+        int16Type -> Char16(value.toChar()).llvm
+        int32Type -> Int32(value).llvm
+        int64Type -> Int64(value.toLong()).llvm
+        floatType -> Float32(value.toFloat()).llvm
+        doubleType -> Float64(value.toDouble()).llvm
+        else -> context.reportCompilationError("Unexpected primitive type: $type")
+    }
+*/
 }
