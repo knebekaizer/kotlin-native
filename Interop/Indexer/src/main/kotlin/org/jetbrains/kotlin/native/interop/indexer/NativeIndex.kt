@@ -271,10 +271,10 @@ data class IntegerType(val size: Int, val isSigned: Boolean, val spelling: Strin
 // TODO: floating type is not actually defined entirely by its size.
 data class FloatingType(val size: Int, val spelling: String) : PrimitiveType
 
-data class VectorType(val elemType: Type, val length: Long) : PrimitiveType {
+data class VectorType(val elemType: Type, val length: Long, val spelling: String) : PrimitiveType {
     // ex:  __attribute__((__vector_size__(4 * sizeof(const float)))) const float
     // val spelling = "${elemType.spelling} __attribute__ ((__vector_size__ (${length * elemType.size})))"
-    val spelling = "float __attribute__ ((__vector_size__ (16)))"
+//    val spelling = "float __attribute__ ((__vector_size__ (16)))"
 }
 
 object VoidType : Type

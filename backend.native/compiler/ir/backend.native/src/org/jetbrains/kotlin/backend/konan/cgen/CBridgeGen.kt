@@ -764,35 +764,8 @@ private fun IrType.isTypeOfNullLiteral(): Boolean = this is IrSimpleType && hasQ
 
 private fun IrType.isVector(): Boolean {
     if (this is IrSimpleType) {
-        val cls = classifier
-        val r = cls.isClassWithFqName(KotlinBuiltIns.FQ_NAMES.nothing)
-        if (cls is IrClassSymbol) {
-            println("this is IrClassSymbol")
-            val symbol: IrClassSymbol = cls
-            if (symbol.isBound)  {
-                val fqName = KotlinBuiltIns.FQ_NAMES.nothing
-                val declaration = symbol.owner
-                val shortName = fqName.shortName()
-                val declFqName = declaration.fqNameWhenAvailable?.toUnsafe()
-                println(declFqName)
-            } else {
-                val name = symbol.descriptor.name
-            //    val descFqName = getFqName(symbol.descriptor)
-               // classFqNameEquals(symbol.descriptor, fqName)
-            }
-//
-//            private fun classFqNameEquals(declaration: IrClass, fqName: FqNameUnsafe): Boolean =
-//                    declaration.name == fqName.shortName() && fqName == declaration.fqNameWhenAvailable?.toUnsafe()
-//
-//            private fun classFqNameEquals(descriptor: ClassDescriptor, fqName: FqNameUnsafe): Boolean =
-//                    descriptor.name == fqName.shortName() && fqName == getFqName(descriptor)
-//
-//            val fqName == this.fqNameWhenAvailable?.toUnsafe()
-
-        }
         val fqName = FqName("kotlinx.cinterop.NativeVector").toUnsafe()
-        val ret = classifier.isClassWithFqName(fqName)
-        return ret
+        return classifier.isClassWithFqName(fqName)
     }
     return false
 }

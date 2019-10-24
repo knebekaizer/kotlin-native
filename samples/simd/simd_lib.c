@@ -18,6 +18,7 @@
 //}
 
 vFloat getVFloat(float f0, float f1, float f2, float f3) {
+	vU128 v;
 	vFloat ret = {f0, f1, f2, f3};
 	printVFloat(ret);
 	return ret;

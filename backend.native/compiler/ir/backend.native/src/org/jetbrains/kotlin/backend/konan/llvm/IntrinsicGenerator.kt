@@ -1,7 +1,6 @@
 package org.jetbrains.kotlin.backend.konan.llvm
 
 import kotlinx.cinterop.cValuesOf
-import kotlinx.cinterop.toCValues
 import llvm.*
 import org.jetbrains.kotlin.backend.konan.RuntimeNames
 import org.jetbrains.kotlin.backend.konan.descriptors.getAnnotationValue
@@ -50,8 +49,6 @@ internal enum class IntrinsicType {
     REINTERPRET,
     ARE_EQUAL_BY_VALUE,
     IEEE_754_EQUALS,
-    VECTOR_OF,
-    VECTOR_SET,
     // OBJC
     OBJC_GET_MESSENGER,
     OBJC_GET_MESSENGER_STRET,
@@ -262,8 +259,6 @@ internal class IntrinsicGenerator(private val environment: IntrinsicGeneratorEnv
                 IntrinsicType.OBJC_GET_SELECTOR,
                 IntrinsicType.IMMUTABLE_BLOB ->
                     reportSpecialIntrinsic(intrinsicType)
-                IntrinsicType.VECTOR_SET -> emitVectorSet(callSite, args)
-                IntrinsicType.VECTOR_OF -> emitVectorOf(callSite, args)
             }
 
     private fun reportSpecialIntrinsic(intrinsicType: IntrinsicType): Nothing =
@@ -709,23 +704,4 @@ internal class IntrinsicGenerator(private val environment: IntrinsicGeneratorEnv
         doubleType -> Float64(value.toDouble()).llvm
         else -> context.reportCompilationError("Unexpected primitive type: $type")
     }
-
-    private fun makeConstOfVectorType(values: List<LLVMValueRef>): LLVMValueRef {
-        // TODO check size and types, but only if LLVM returns null, to avoid double check on the fast path
-        return LLVMConstVector(values.toCValues(), values.size)!!
-    }
-
-    private fun FunctionGenerationContext.emitVectorSet(callSite: IrCall, args: List<LLVMValueRef>): LLVMValueRef {
-        println("emitVectorSet>")
-        val v = LLVMBuildAlloca(builder, LLVMVectorType(LLVMFloatType(), 4), "")
-        return LLVMBuildInsertElement(builder, v, args[2], Int32(0).llvm, "")!!
-//        produced:
-//          Invalid insertelement operands!
-//          %10 = insertelement <4 x float>* %9, float 0.000000e+00, i32 0
-    }
-
-    private fun FunctionGenerationContext.emitVectorOf(callSite: IrCall, args: List<LLVMValueRef>): LLVMValueRef {
-        return makeConstOfVectorType(args)
-    }
-
 }

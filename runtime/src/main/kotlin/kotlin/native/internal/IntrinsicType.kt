@@ -35,7 +35,6 @@ class IntrinsicType {
         const val REINTERPRET           = "REINTERPRET"
         const val ARE_EQUAL_BY_VALUE    = "ARE_EQUAL_BY_VALUE"
         const val IEEE_754_EQUALS       = "IEEE_754_EQUALS"
-        const val VECTOR_SET            = "VECTOR_SET"
 
         // ObjC related stuff
         const val OBJC_GET_MESSENGER            = "OBJC_GET_MESSENGER"

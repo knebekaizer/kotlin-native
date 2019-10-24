@@ -99,5 +99,4 @@ vFloat Kotlin_Vector_of(KFloat f0, KFloat f1, KFloat f2, KFloat f3) {
 	return {f0, f1, f2, f3};
 }
 
-
 }  // extern "C"
