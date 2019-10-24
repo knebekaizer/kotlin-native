@@ -62,6 +62,14 @@ int main(void) {
 //	i128 v2 = (i128)getVFloat(1,4,3,7);
 //	float dist = my_simd_distance((vFloat)v1, (vFloat)v2);
 
+	vFloat f = {0.1, 1.3, 2.6, 3.8};
+	vFloat ceil = vceilf(f);
+	printVFloat(ceil);
+
+	vFloat f2 = {1, 3.162, 10, 31};
+	vFloat lg = vlog10f(f2);
+	printVFloat(ceil);
+
 	return 0;
 }
 

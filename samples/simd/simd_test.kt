@@ -3,7 +3,8 @@ import kotlin.test.*
 
 import simd_wrapper.*
 
-
+import kotlin.math.*
+import platform.Accelerate.*
 
 fun test_dist() {
     var v1 = vectorOf(-1f, 0f, 0f, -7f)
@@ -19,4 +20,11 @@ fun main() {
     printVFloat(v)
 
     test_dist()
+
+    val ln = kotlin.math.ln(2.718)
+    println("log(2.718) = $ln")
+
+    val f2 = vectorOf(1f, 3.162f, 10f, 31f)
+    val lg = vlog10f(f2)
+    printVFloat(lg)
 }

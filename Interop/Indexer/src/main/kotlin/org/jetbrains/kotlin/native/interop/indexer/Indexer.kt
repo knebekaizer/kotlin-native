@@ -517,7 +517,7 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
     }
 
     fun convertType(type: CValue<CXType>, typeAttributes: CValue<CXTypeAttributes>? = null): Type {
-println("convertType> Type ${type.name} of kind ${type.kind.spelling}")
+//println("convertType> Type ${type.name} of kind ${type.kind.spelling}")
         val primitiveType = convertUnqualifiedPrimitiveType(type)
         if (primitiveType != UnsupportedType) {
             return primitiveType

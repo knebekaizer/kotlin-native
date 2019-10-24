@@ -64,6 +64,15 @@ public class VectorVarOf<T : NativeVector>(rawPtr: NativePtr) : CVariable(rawPtr
 //    open class Type(size: Int) : CVariable.Type(size.toLong(), align = size)
 }
 
+//public class VectorVarOf<T : NativeVector>(rawPtr: NativePtr) : CPrimitiveVar(rawPtr) {
+//    companion object : Type(16)
+//}
+public typealias VectorVar = VectorVarOf<NativeVector>
+
+public var <T : NativeVector> VectorVarOf<T>.value: T
+    get() = nativeMemUtils.getVector(this) as T
+    set(value) = nativeMemUtils.putVector(this, value)
+
 @SymbolName("Kotlin_Vector_of")
 external fun vectorOf(f0: Float, f1: Float, f2: Float, f3: Float): NativeVector
 
