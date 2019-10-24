@@ -1648,4 +1648,3 @@ public final class Double private constructor() : Number(), Comparable<Double> {
     @PublishedApi
     external internal fun bits(): Long
 }
-

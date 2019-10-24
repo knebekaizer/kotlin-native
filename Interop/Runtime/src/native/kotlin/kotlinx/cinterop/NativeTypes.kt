@@ -57,8 +57,19 @@ external fun CPointer<*>.getRawValue(): NativePtr
 internal fun CPointer<*>.cPointerToString() = "CPointer(raw=$rawValue)"
 
 
+public final class NativeVector private constructor()
+
+public class VectorVarOf<T : NativeVector>(rawPtr: NativePtr) : CVariable(rawPtr) {
+    // aligning by size is obviously enough
+//    open class Type(size: Int) : CVariable.Type(size.toLong(), align = size)
+}
+
+
 @SymbolName("Kotlin_Vector_of")
 external fun vectorOf(f0: Float, f1: Float, f2: Float, f3: Float): NativeVector
+
+@TypedIntrinsic(IntrinsicType.VECTOR_SET)
+external fun NativeVector.set(f0: Float, f1: Float, f2: Float, f3: Float)
 
 
 /**

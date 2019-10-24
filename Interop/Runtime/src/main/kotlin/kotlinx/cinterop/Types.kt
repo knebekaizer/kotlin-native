@@ -473,11 +473,3 @@ public typealias CArrayPointerVar<T> = CPointerVar<T>
  */
 public class CFunction<T : Function<*>>(rawPtr: NativePtr) : CPointed(rawPtr)
 
-
-public final class NativeVector private constructor()
-
-//@Suppress("FINAL_UPPER_BOUND")
-public class VectorVarOf<T : NativeVector>(rawPtr: NativePtr) : CPrimitiveVar(rawPtr) {
-    companion object : Type(16)
-}
-public typealias VectorVar = VectorVarOf<NativeVector>
