@@ -504,10 +504,15 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
             val size = clang_Type_getSizeOf(type)
             val elemSize = clang_Type_getSizeOf(clang_getElementType(type))
             val length = size / elemSize
-        //    val spelling = clang_getTypeSpelling(type).convertAndDispose().dropConstQualifier()
+            //    val spelling = clang_getTypeSpelling(type).convertAndDispose().dropConstQualifier()
             val spelling = type.name // __attribute__((__vector_size__(4 * sizeof(const float)))) const float
-            println("convertUnqualifiedPrimitiveType> sizeof = $size, VectorType<$elementType> elemSize = $elemSize, length = $length, ${type.name}")
-            VectorType(elementType, length, spelling)
+            if (size == 16L) {
+            //    println("convertUnqualifiedPrimitiveType> sizeof = $size, VectorType<$elementType> elemSize = $elemSize, length = $length, ${type.name}")
+                VectorType(elementType, length, spelling)
+            } else {
+                println("convertUnqualifiedPrimitiveType> Unsupported vector type: <$length x ${elementType.name}>")
+                UnsupportedType
+            }
         }
 
 

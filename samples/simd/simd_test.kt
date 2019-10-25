@@ -13,6 +13,19 @@ fun test_dist() {
     println(len)
 }
 
+class Box<T>(t: T) {
+//    var value = t
+}
+
+fun runTest() {
+    val dBox: Box<Double> = Box<Double>(21.0)
+//    println(dBox.value)
+    val v = vectorOf(42f, 1f, 2f, 3f)
+    val box: Box<NativeVector> = Box<NativeVector>(v)
+//    println(box.value)
+//    printVFloat(box.value)
+}
+
 
 fun main() {
 
@@ -21,10 +34,13 @@ fun main() {
 
     test_dist()
 
-    val ln = kotlin.math.ln(2.718)
-    println("log(2.718) = $ln")
+//    val ln = kotlin.math.ln(2.718)
+//    println("log(2.718) = $ln")
 
     val f2 = vectorOf(1f, 3.162f, 10f, 31f)
     val lg = vlog10f(f2)
     printVFloat(lg)
+    runTest()
+
+//    println(lg)
 }
