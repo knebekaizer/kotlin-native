@@ -81,6 +81,16 @@ public final class NativeVector private constructor() {
 
     @TypedIntrinsic(IntrinsicType.EXTRACT_ELEMENT)
     external fun getULong(index: Int): ULong
+
+    public override fun toString() = "(${getFloat(0)}, ${getFloat(1)}, ${getFloat(2)}, ${getFloat(3)})"
+
+    // Not as good for floating types
+    public fun equals(other: NativeVector): Boolean =
+            getLong(0) == other.getLong(0) && getLong(1) == other.getLong(1)
+
+    public override fun equals(other: Any?): Boolean =
+            other is NativeVector && this.equals(other)
+
 }
 
 public class NativeVectorVarOf<T : NativeVector>(rawPtr: NativePtr) : CVariable(rawPtr)

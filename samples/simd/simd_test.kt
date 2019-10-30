@@ -31,7 +31,7 @@ class Box<T>(t: T) {
 ////    printVFloat(box.value)
 //}
 
-fun testOOB() {
+fun test_OOB() {
     val f = vectorOf(1f, 3.162f, 10f, 31f)
 //    println(f.getFloat(-1))
     println("getByte(15) is OK: ${f.getByte(15)}")
@@ -53,6 +53,18 @@ fun testOOB() {
     println("Exception test $result")
 }
 
+fun test_equals() {
+    var v1 = vectorOf(-1f, 0f, 0f, -7f)
+    var v2 = vectorOf(1f, 4f, 3f, 7f)
+    println("v1.equals(v2) = ${v1.equals(v2)}")
+    v1 = v2
+    println("Now v1.equals(v2) = ${v1.equals(v2)}")
+    val d = 42f
+    println("v1.equals(d) = ${v1.equals(d)}")
+    val x = (v1 == v2)
+}
+
+
 fun main() {
 
     val v = vectorOf(42f, 1f, 2f, 3f)
@@ -73,12 +85,12 @@ fun main() {
     println(f2.getUByte(2))
     println(f2.getByte(3))
 
-    val lg = vlog10f(f2)
-    printVFloat(lg)
-//    runTest()
+    println("vlog10f($f2) = ${vlog10f(f2)}")
+
+    test_equals()
 
     test_Accelerate()
-    testOOB()
+    test_OOB()
 
 //    println(lg)
 }
