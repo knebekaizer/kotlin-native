@@ -107,4 +107,6 @@ static void initSignalChaining() {
   checkSignalChaining();
 }
 
+extern "C" void smthStupid();
+
 #endif // defined(__linux__) || defined(__APPLE__)

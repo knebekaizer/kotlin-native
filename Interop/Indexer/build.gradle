@@ -85,6 +85,7 @@ model {
             binaries.all {
                 cCompiler.args hostPlatform.clang.hostCompilerArgsForJni
                 cCompiler.args.addAll(cflags)
+                cppCompiler.args.addAll(cflags)
             }
 
             binaries.withType(SharedLibraryBinarySpec) {

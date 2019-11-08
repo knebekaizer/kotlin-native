@@ -55,6 +55,8 @@ unsigned clang_Cursor_isObjCReturningRetainedMethod(CXCursor cursor);
 
 unsigned clang_Cursor_isObjCConsumingSelfMethod(CXCursor cursor);
 
+int tryCastToVector(CXType type);
+
 #ifdef __cplusplus
 }
 #endif
