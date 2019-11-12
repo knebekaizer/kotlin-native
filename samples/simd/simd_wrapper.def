@@ -1,0 +1,5 @@
+headers = simd_lib.h
+# /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/usr/include/simd/geometry.h
+headerFilter = simd_lib.h
+#language = C
+#compilerOpts = -I.
