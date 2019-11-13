@@ -20,8 +20,6 @@ fun Vector128.toStringFloat(): String {
 
 fun main() {
 
-    println(Int.MIN_VALUE.toString(16))
-
     // Use interop types and variables:
     println(myVar4i32)
     myVar4i32 = vectorOf(2, 12, 850, 6)

@@ -1,5 +1,23 @@
-headers = simd_lib.h
-# /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/usr/include/simd/geometry.h
-headerFilter = simd_lib.h
+#headers = simd_lib.h
+#headerFilter = simd_lib.h
 #language = C
 #compilerOpts = -I.
+
+---
+
+#include <simd/geometry.h>
+
+static simd_int4 myVar4i32 = {1, 4, 9, 25};
+
+float length(simd_float4 f) {
+    return simd_length(f);
+}
+
+simd_float4 vfadd(simd_float4 v1, simd_float4 v2) {
+	return v1 + v2;
+}
+
+simd_float4 vfsub(simd_float4 v1, simd_float4 v2) {
+	return v1 - v2;
+}
+
