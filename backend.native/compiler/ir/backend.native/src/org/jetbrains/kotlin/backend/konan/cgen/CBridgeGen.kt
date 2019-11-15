@@ -73,6 +73,9 @@ private class KotlinToCCallBuilder(
     val cCallBuilder = CCallBuilder()
     val cFunctionBuilder = CFunctionBuilder()
 
+    fun init() {
+        println("KotlinToCCallBuilder.ctor>")
+    }
 }
 
 private fun KotlinToCCallBuilder.passThroughBridge(argument: IrExpression, kotlinType: IrType, cType: CType): CVariable {
@@ -469,8 +472,10 @@ private fun CCallbackBuilder.buildValueReturn(function: IrSimpleFunction, valueR
         kotlinBridgeStatements.forEach { +it }
     }
     stubs.addKotlin(kotlinBridge)
+println("CCallbackBuilder.buildValueReturn> ${kotlinBridge.name.asString()}")
 
     stubs.addC(listOf("${buildCBridge()};"))
+println("CCallbackBuilder.buildValueReturn> ${buildCBridge()}")
 }
 
 private fun CCallbackBuilder.buildCFunction(): String {
@@ -545,6 +550,7 @@ internal fun KotlinStubs.generateCFunctionAndFakeKotlinExternalFunction(
         isObjCMethod: Boolean,
         location: IrElement
 ): IrSimpleFunction {
+println("KotlinStubs.generateCFunctionAndFakeKotlinExternalFunction> ${function.name.asString()}")
     val cFunction = generateCFunction(function, signature, isObjCMethod, location)
     return createFakeKotlinExternalFunction(signature, cFunction, isObjCMethod)
 }
@@ -648,7 +654,7 @@ private fun KotlinToCCallBuilder.mapCalleeFunctionParameter(
         argument: IrExpression
 ): KotlinToCArgumentPassing {
     val classifier = type.classifierOrNull
-    return when {
+    val ret =  when {
         classifier == symbols.interopCValues || // Note: this should not be accepted, but is required for compatibility
                 classifier == symbols.interopCValuesRef -> CValuesRefArgumentPassing
 
@@ -671,6 +677,7 @@ private fun KotlinToCCallBuilder.mapCalleeFunctionParameter(
                 location = TypeLocation.FunctionArgument(argument)
         )
     }
+    return ret
 }
 
 private fun KotlinStubs.mapFunctionParameterType(
@@ -768,7 +775,8 @@ private fun KotlinStubs.mapType(
         variadic: Boolean,
         typeLocation: TypeLocation,
         reportUnsupportedType: (String) -> Nothing
-): ValuePassing = when {
+): ValuePassing  {
+    val ret = when {
     type.isBoolean() -> BooleanValuePassing(
             cBoolType(target) ?: reportUnsupportedType("unavailable on target platform"),
             irBuiltIns
@@ -821,6 +829,8 @@ private fun KotlinStubs.mapType(
     isObjCReferenceType(type) -> ObjCReferenceValuePassing(symbols, type, retained = retained)
 
     else -> reportUnsupportedType("doesn't correspond to any C type")
+    }
+    return ret
 }
 
 private fun KotlinStubs.isObjCReferenceType(type: IrType): Boolean {
@@ -877,12 +887,14 @@ private abstract class SimpleValuePassing : ValuePassing {
     abstract fun cToBridged(expression: String): String
 
     override fun KotlinToCCallBuilder.passValue(expression: IrExpression): CExpression {
+println("KotlinToCCallBuilder.passValue>")
         val bridgeArgument = irBuilder.kotlinToBridged(expression)
         val cBridgeValue = passThroughBridge(bridgeArgument, kotlinBridgeType, cBridgeType).name
         return CExpression(bridgedToC(cBridgeValue), cType)
     }
 
     override fun KotlinToCCallBuilder.returnValue(expression: String): IrExpression {
+println("KotlinToCCallBuilder.returnValue>")
         cFunctionBuilder.setReturnType(cType)
         bridgeBuilder.setReturnType(kotlinBridgeType, cBridgeType)
         cBridgeBodyLines.add("return ${cToBridged(expression)};")
@@ -891,6 +903,7 @@ private abstract class SimpleValuePassing : ValuePassing {
     }
 
     override fun CCallbackBuilder.receiveValue(): IrExpression {
+println("CCallbackBuilder.receiveValue>")
         val cParameter = cFunctionBuilder.addParameter(callbackParameterCType)
         val cBridgeArgument = cToBridged(cParameter.name)
         val kotlinParameter = passThroughBridge(cBridgeArgument, cBridgeType, kotlinBridgeType)
@@ -908,6 +921,7 @@ private abstract class SimpleValuePassing : ValuePassing {
         }
         val cBridgeCall = buildCBridgeCall()
         cBodyLines += "return ${bridgedToC(cBridgeCall)};"
+println("CCallbackBuilder.returnValue> ${cBodyLines.joinToString("\n    ")}")
     }
 }
 
