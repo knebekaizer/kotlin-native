@@ -25,10 +25,16 @@ internal class BitcodeCompiler(val context: Context) {
         addAll(elements.filter { it.isNotEmpty() })
     }
 
-    private fun runTool(vararg command: String) =
-            Command(*command)
-                    .logWith(context::log)
-                    .execute()
+    private fun logX(message: () -> String) {
+            println(message())
+    }
+
+    private fun runTool(vararg command: String) {
+println("runTool> ${command.toList<String>()}" )
+        Command(*command)
+        .logWith( ::logX ) // .logWith(context::log) //
+        .execute()
+    }
 
     private fun temporary(name: String, suffix: String): String =
             context.config.tempFiles.create(name, suffix).absolutePath

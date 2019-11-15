@@ -4,6 +4,7 @@
  */
 package org.jetbrains.kotlin.native.interop.gen
 
+import com.sun.jdi.ShortType
 import org.jetbrains.kotlin.native.interop.gen.jvm.InteropConfiguration
 import org.jetbrains.kotlin.native.interop.gen.jvm.KotlinPlatform
 import org.jetbrains.kotlin.native.interop.indexer.*
@@ -343,7 +344,8 @@ class StubIrBuilder(private val context: StubIrContext) {
         try {
             addStubs(EnumStubBuilder(buildingContext, enumDef).build())
         } catch (e: Throwable) {
-            context.log("Warning: cannot generate definition for enum ${enumDef.spelling}")
+            context.log("Warning: cannot generate definition for enum ${enumDef.spelling}" +
+                    "\n\t$e :\n\t${e.stackTrace.joinToString("\n\t")}")
         }
     }
 
@@ -351,6 +353,7 @@ class StubIrBuilder(private val context: StubIrContext) {
         try {
             addStubs(FunctionStubBuilder(buildingContext, func).build())
         } catch (e: Throwable) {
+            println(e.printStackTrace())
             context.log("Warning: cannot generate stubs for function ${func.name}")
         }
     }

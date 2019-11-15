@@ -17,6 +17,7 @@ import org.jetbrains.kotlin.native.interop.tool.*
  * Otherwise returns array of compiler args.
  */
 fun invokeInterop(flavor: String, args: Array<String>): Array<String>? {
+println("invokeInterop> ${args.joinToString(" ")}")
     val arguments = if (flavor == "native") CInteropArguments() else JSInteropArguments()
     arguments.argParser.parse(args)
     val outputFileName = arguments.output

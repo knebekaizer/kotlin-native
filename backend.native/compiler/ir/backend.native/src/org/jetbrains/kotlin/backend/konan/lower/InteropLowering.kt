@@ -56,6 +56,7 @@ internal abstract class BaseInteropIrTransformer(private val context: Context) :
             createKotlinStubs(element).block()
 
     protected fun createKotlinStubs(element: IrElement?): KotlinStubs {
+println("BaseInteropIrTransformer.createKotlinStubs>")
         val location = if (element != null) {
             element.getCompilerMessageLocation(irFile)
         } else {
@@ -123,6 +124,7 @@ internal class InteropLoweringPart1(val context: Context) : BaseInteropIrTransfo
     }
 
     override fun lower(irFile: IrFile) {
+//println("InteropLoweringPart1.lower> ${irFile.fileEntry.name}")
         currentFile = irFile
         irFile.transformChildrenVoid(this)
 
@@ -786,6 +788,7 @@ internal class InteropLoweringPart1(val context: Context) : BaseInteropIrTransfo
  */
 internal class InteropLoweringPart2(val context: Context) : FileLoweringPass {
     override fun lower(irFile: IrFile) {
+//println("InteropLoweringPart2.lower> ${irFile.fileEntry.name}")
         val transformer = InteropTransformer(context, irFile)
         irFile.transformChildrenVoid(transformer)
 
