@@ -357,7 +357,8 @@ class StubIrBuilder(private val context: StubIrContext) {
         try {
             addStubs(EnumStubBuilder(buildingContext, enumDef).build())
         } catch (e: Throwable) {
-            context.log("Warning: cannot generate definition for enum ${enumDef.spelling}")
+            context.log("Warning: cannot generate definition for enum ${enumDef.spelling}" +
+                    "\n\t$e :\n\t${e.stackTrace.joinToString("\n\t")}")
         }
     }
 
@@ -365,6 +366,7 @@ class StubIrBuilder(private val context: StubIrContext) {
         try {
             addStubs(FunctionStubBuilder(buildingContext, func, skipOverloads = true).build())
         } catch (e: Throwable) {
+            println(e.printStackTrace())
             context.log("Warning: cannot generate stubs for function ${func.name}")
         }
     }

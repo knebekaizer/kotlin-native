@@ -46,6 +46,8 @@ class K2Native : CLICompiler<K2NativeCompilerArguments>() {
                            @NotNull rootDisposable: Disposable,
                            @Nullable paths: KotlinPaths?): ExitCode {
 
+//println("K2Native.doExecute> configuration = ${configuration.toString()}")
+println("K2Native.doExecute>")
         if (arguments.version) {
             println("Kotlin/Native: ${CompilerVersion.CURRENT}")
             return ExitCode.OK
@@ -239,6 +241,7 @@ class K2Native : CLICompiler<K2NativeCompilerArguments>() {
     companion object {
         @JvmStatic fun main(args: Array<String>) {
             profile("Total compiler main()") {
+println("K2Native main> args = ${args.joinToString(" ")}")
                 doMain(K2Native(), args)
             }
         }

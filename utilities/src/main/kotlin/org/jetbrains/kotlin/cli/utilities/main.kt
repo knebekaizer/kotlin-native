@@ -10,6 +10,7 @@ import org.jetbrains.kotlin.cli.klib.main as klibMain
 import org.jetbrains.kotlin.cli.bc.mainNoExit as konancMainNoExit
 
 private fun mainImpl(args: Array<String>, konancMain: (Array<String>) -> Unit) {
+println("Utilities/main> ${args.joinToString(" ")}")
     val utilityName = args[0]
     val utilityArgs = args.drop(1).toTypedArray()
     when (utilityName) {

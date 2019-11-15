@@ -86,6 +86,7 @@ inline bool isValidRuntime() {
 volatile int aliveRuntimesCount = 0;
 
 RuntimeState* initRuntime() {
+printf("initRuntime>\n");
   SetKonanTerminateHandler();
   RuntimeState* result = konanConstructInstance<RuntimeState>();
   if (!result) return kInvalidRuntime;
@@ -96,6 +97,7 @@ RuntimeState* initRuntime() {
   bool firstRuntime = atomicAdd(&aliveRuntimesCount, 1) == 1;
   // Keep global variables in state as well.
   if (firstRuntime) {
+printf("initRuntime> firstRuntime\n");
     isMainThread = 1;
     konan::consoleInit();
 #if KONAN_OBJC_INTEROP
@@ -139,6 +141,7 @@ void AppendToInitializersTail(InitNode *next) {
 }
 
 void Kotlin_initRuntimeIfNeeded() {
+printf("Kotlin_initRuntimeIfNeeded>\n");
   if (!isValidRuntime()) {
     initRuntime();
     RuntimeCheck(updateStatusIf(::runtimeState, SUSPENDED, RUNNING), "Cannot transition state to RUNNING for init");
@@ -148,6 +151,7 @@ void Kotlin_initRuntimeIfNeeded() {
 }
 
 void Kotlin_deinitRuntimeIfNeeded() {
+printf("Kotlin_deinitRuntimeIfNeeded>\n");
   if (isValidRuntime()) {
     deinitRuntime(::runtimeState);
     ::runtimeState = kInvalidRuntime;
@@ -155,10 +159,12 @@ void Kotlin_deinitRuntimeIfNeeded() {
 }
 
 RuntimeState* Kotlin_createRuntime() {
+printf("Kotlin_createRuntime>\n");
   return initRuntime();
 }
 
 void Kotlin_destroyRuntime(RuntimeState* state) {
+printf("Kotlin_destroyRuntime>\n");
  RuntimeCheck(updateStatusIf(state, SUSPENDED, DESTROYING), "Cannot transition state to DESTROYING");
  deinitRuntime(state);
 }
