@@ -31,6 +31,7 @@ import java.nio.file.*
 import java.util.*
 
 fun main(args: Array<String>) {
+println("org.jetbrains.kotlin.native.interop.gen.jvm.main> ${args.joinToString(" ")}")
     processCLib(args)
 }
 
@@ -162,6 +163,8 @@ private fun findFilesByGlobs(roots: List<Path>, globs: List<String>): Map<Path, 
 
 
 private fun processCLib(args: Array<String>, additionalArgs: Map<String, Any> = mapOf()): Array<String>? {
+println("processLib> args = ${args.joinToString(" ")}")
+//println("processLib>  additionalArgs = "); additionalArgs.forEach { (key, value) -> println("    $key = $value") }
     val cinteropArguments = CInteropArguments()
     cinteropArguments.argParser.parse(args)
     val ktGenRoot = cinteropArguments.generated

@@ -1,5 +1,6 @@
 package org.jetbrains.kotlin.backend.konan
 
+import org.jetbrains.kotlin.backend.common.phaser.dumpToStdout
 import org.jetbrains.kotlin.cli.common.messages.CompilerMessageLocation
 import org.jetbrains.kotlin.cli.common.messages.CompilerMessageSeverity
 import org.jetbrains.kotlin.cli.common.messages.MessageCollector
@@ -14,6 +15,7 @@ class CStubsManager(private val target: KonanTarget) {
     fun getUniqueName(prefix: String) = "$prefix${counter++}"
 
     fun addStub(kotlinLocation: CompilerMessageLocation?, lines: List<String>) {
+//println("CStubsManager.addStub> \n    ${lines.joinToString("\n    ")}")
         stubs += Stub(kotlinLocation, lines)
     }
 
@@ -28,15 +30,18 @@ class CStubsManager(private val target: KonanTarget) {
             }
             else -> ".c"
         }
-        val cSource = createTempFile("cstubs", sourceFileExtension).deleteOnExit()
+        val cSource = createTempFile("cstubs", sourceFileExtension) // .deleteOnExit()
         cSource.writeLines(stubs.flatMap { it.lines })
+println("CStubsManager.compile> cSource = ${cSource.absolutePath}\n    ${stubs.flatMap { it.lines }.joinToString("\n    ")}")
 
-        val bitcode = createTempFile("cstubs", ".bc").deleteOnExit()
+        val bitcode = createTempFile("cstubs", ".bc") // .deleteOnExit()
+println("CStubsManager.compile> bitcode = ${bitcode.absolutePath}")
 
         val cSourcePath = cSource.absolutePath
 
         val clangCommand = clang.clangC(*compilerOptions.toTypedArray(), "-O2",
                 cSourcePath, "-emit-llvm", "-c", "-o", bitcode.absolutePath)
+println("CStubsManager.compile> clangCommand = ${clangCommand.joinToString(" ")}")
 
         val result = Command(clangCommand).getResult(withErrors = true)
         if (result.exitCode != 0) {

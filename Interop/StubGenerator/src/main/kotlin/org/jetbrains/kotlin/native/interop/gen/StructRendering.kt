@@ -23,6 +23,7 @@ private fun tryRenderStruct(def: StructDef): String? {
                 is Field -> {
                     val defaultAlignment = if (isPackedStruct) 1L else it.typeAlign
                     val alignment = guessAlignment(offset, it.offsetBytes, defaultAlignment) ?: return null
+                            .also { println("tryRenderStruct> Can't render ${def.decl.spelling}")}
 
                     offset = it.offsetBytes + it.typeSize
 
@@ -38,6 +39,7 @@ private fun tryRenderStruct(def: StructDef): String? {
 
         append("}")
     }
+            .also { println("tryRenderStruct> $it") }
 }
 
 private fun guessAlignment(offset: Long, paddedOffset: Long, defaultAlignment: Long): Long? =
