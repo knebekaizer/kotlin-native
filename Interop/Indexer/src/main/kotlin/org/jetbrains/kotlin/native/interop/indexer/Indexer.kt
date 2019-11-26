@@ -267,7 +267,22 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
             val cursorType = clang_getCursorType(cursor)
             val typeSpelling = clang_getTypeSpelling(cursorType).convertAndDispose()
 
-            val baseType = convertType(clang_getEnumDeclIntegerType(cursor))
+            println("getEnumDefAt> ${clang_getEnumDeclIntegerType(cursor).name}")
+            /*
+             *  if base is typedef && base.canonT is CHAR
+             *      use canonT as IntegerType
+             *  else
+             *      use base
+             */
+        //    val baseType_ = convertType(clang_getEnumDeclIntegerType(cursor), charAsIntegerType = true)
+            val canonicalBase = clang_getCanonicalType(clang_getEnumDeclIntegerType(cursor))
+            val baseType = when  (canonicalBase.kind) {
+                CXType_Char_S, CXType_Char_U -> IntegerType(1, false, canonicalBase.name.dropConstQualifier())
+                else -> convertType(clang_getEnumDeclIntegerType(cursor))
+            }
+            println("getEnumDefAt> ${clang_getCanonicalType(clang_getEnumDeclIntegerType(cursor)).name}")
+
+         //   val baseType = convertUnqualifiedPrimitiveType(clang_getCanonicalType(clang_getEnumDeclIntegerType(cursor)), charAsIntegerType = true)
 
             val enumDef = EnumDefImpl(typeSpelling, baseType, getLocation(cursor))
 
@@ -418,6 +433,7 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
         val name = getCursorSpelling(declCursor)
 
         val underlying = convertType(clang_getTypedefDeclUnderlyingType(declCursor))
+println("getTypedef> $name : ${clang_getTypedefDeclUnderlyingType(declCursor).name} vs ${clang_getCanonicalType(declCursor.type).name}")
 
         if (underlying == UnsupportedType) return underlying
 
@@ -474,10 +490,14 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
     private fun String.dropConstQualifier() =
             substringAfterLast("const ")
 
-    private fun convertUnqualifiedPrimitiveType(type: CValue<CXType>): Type = when (type.kind) {
+    private fun convertUnqualifiedPrimitiveType(type: CValue<CXType>, charAsIntegerType: Boolean): Type = when (type.kind) {
         CXTypeKind.CXType_Char_U, CXTypeKind.CXType_Char_S -> {
             assert(type.getSize() == 1L)
-            CharType
+            if (charAsIntegerType) {
+                IntegerType(1, false, type.name.dropConstQualifier())
+            } else {
+                CharType
+            }
         }
 
         CXTypeKind.CXType_UChar, CXTypeKind.CXType_UShort,
@@ -541,9 +561,9 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
         else -> UnsupportedType
     }
 
-    fun convertType(type: CValue<CXType>, typeAttributes: CValue<CXTypeAttributes>? = null): Type {
+    fun convertType(type: CValue<CXType>, typeAttributes: CValue<CXTypeAttributes>? = null, charAsIntegerType: Boolean = false): Type {
 //println("convertType> Type ${type.name} of kind ${type.kind.spelling}")
-        val primitiveType = convertUnqualifiedPrimitiveType(type)
+        val primitiveType = convertUnqualifiedPrimitiveType(type, charAsIntegerType)
         if (primitiveType != UnsupportedType) {
             return primitiveType
         }
@@ -571,7 +591,7 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
             CXType_Typedef -> {
                 val declCursor = clang_getTypeDeclaration(type)
                 val declSpelling = getCursorSpelling(declCursor)
-                val underlying = convertType(clang_getTypedefDeclUnderlyingType(declCursor))
+                val underlying = convertType(clang_getTypedefDeclUnderlyingType(declCursor), charAsIntegerType = charAsIntegerType)
                 when {
                     declSpelling == "instancetype" && underlying is ObjCPointer ->
                         ObjCInstanceType(getNullability(type, typeAttributes))

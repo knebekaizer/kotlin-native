@@ -1,0 +1,16 @@
+#language = Objective-C
+---
+
+typedef char Smth;
+enum E1 : Smth {
+    ZERO
+};
+
+void foo(enum E1);
+
+typedef signed char SChar;
+enum E2 : SChar {
+    ONE
+};
+
+void bar(enum E2);
