@@ -242,7 +242,6 @@ internal fun Appendable.appendPreamble(compilation: Compilation) = this.apply {
  */
 internal fun Compilation.createTempSource(): File {
     val result = createTempFile(suffix = ".${language.sourceFileExtension}")
-println("Compilation.createTempSource> ${result.absolutePath}")
 //    result.deleteOnExit()
 
     result.bufferedWriter().use { writer ->
@@ -250,6 +249,7 @@ println("Compilation.createTempSource> ${result.absolutePath}")
     }
 
     return result
+            .also { println("${it.absolutePath}\n    ${it.readLines().joinToString("\n    ")}") }
 }
 
 fun Compilation.copy(

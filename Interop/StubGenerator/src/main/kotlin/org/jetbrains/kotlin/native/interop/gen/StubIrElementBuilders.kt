@@ -68,6 +68,8 @@ internal class StructStubBuilder(
 
         val fields: List<PropertyStub?> = def.fields.map { field ->
             try {
+                println("StructStubBuilder.build> field: ${field.name}, offset = ${field.offset}")
+
                 assert(field.name.isNotEmpty())
                 assert(field.offset % 8 == 0L)
                 val offset = field.offset / 8
@@ -101,6 +103,7 @@ internal class StructStubBuilder(
                     }
                 }
             } catch (e: Throwable) {
+                println( "\n\t$e :\n\t${e.stackTrace.joinToString("\n\t")}")
                 null
             }
         }
