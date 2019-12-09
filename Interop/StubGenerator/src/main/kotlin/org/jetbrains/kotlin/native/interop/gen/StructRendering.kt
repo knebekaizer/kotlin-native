@@ -58,7 +58,6 @@ private fun guessAlignment(offset: Long, paddedOffset: Long, defaultAlignment: L
 private fun alignUp(x: Long, alignment: Long): Long = (x + alignment - 1) and ((alignment - 1).inv())
 
 private fun tryRenderUnion(def: StructDef, nestingLevel: Int = 0): String? =
-        if (def.members.any { it.offset != 0L }) null else
         buildString {
             append("union { ")
             def.members.forEachIndexed { i, it ->
