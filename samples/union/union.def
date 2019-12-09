@@ -1,0 +1,87 @@
+#headers = c1.h
+#headerFilter = c1.h
+language = C
+compilerOpts = -std=c11
+
+---
+
+
+struct CTest {
+	char first;
+	union {
+		int a[2];
+		struct { long b1, b2; };
+	};
+	char last;
+} __attribute__ ((packed));
+
+static struct CTest retByValue() {
+	struct CTest c;
+	c.first = 'a';
+	c.b1 = 42;
+	c.a[1] = 1;
+	c.last = 'z';
+	printf("retByValue> c.b1 = %lx\n", c.b1);
+	return c;
+}
+
+/*
+struct CTest {
+	long z;
+	union {
+		int a[2];
+		struct {
+			long b;
+			char c;
+		};
+	};
+};
+
+static struct CTest retByValue() {
+	struct CTest c;
+	c.b = 42;
+	c.a[1] = 1;
+	printf("retByValue> c.b = %lx\n", c.b);
+	return c;
+}
+
+/*
+struct CTest2 {
+	union {
+		int a[2];
+		long b;
+	};
+};
+
+struct OuterCStruct {
+
+	const int plainCField;
+	struct {
+		int innerCField;
+	};
+
+	struct {
+		int innerUnionF1;
+		double innerUnionF2;
+	};
+
+	struct Inner {
+		int innerCField;
+	} innerImpl;
+};
+
+int paramByValue(struct CTest x);
+
+static struct CTest2 retByValue2() {
+	struct CTest2 x;
+	x.b = 0;
+	x.a[0] = 42;
+	x.a[1] = 21;
+	return x;
+}
+
+static struct OuterCStruct retByValue3() {
+	struct OuterCStruct x;
+	return x;
+}
+*/
