@@ -107,6 +107,7 @@ class MappingBridgeGeneratorImpl(
                 }
             }
         }
+                .also { println(it) }
 
         val result = when (unwrappedReturnType) {
             is VoidType -> callExpr

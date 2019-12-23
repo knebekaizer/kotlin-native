@@ -933,6 +933,21 @@ private class TrivialValuePassing(val kotlinType: IrType, override val cType: CT
     override fun cToBridged(expression: String): String = expression
 }
 
+private class VectorValuePassing(val kotlinType: IrType, val cInternalType: CType, override val cType: CType) : SimpleValuePassing() {
+    override val kotlinBridgeType: IrType
+        get() = kotlinType
+    override val cBridgeType: CType
+        get() = cInternalType
+
+    override fun IrBuilderWithScope.kotlinToBridged(expression: IrExpression): IrExpression = expression
+
+    override fun IrBuilderWithScope.bridgedToKotlin(expression: IrExpression, symbols: KonanSymbols): IrExpression = expression
+
+    override fun bridgedToC(expression: String): String = cType.cast(expression)
+
+    override fun cToBridged(expression: String): String = cBridgeType.cast(expression)
+}
+
 private class UnsignedValuePassing(val kotlinType: IrType, val cSignedType: CType, override val cType: CType) : SimpleValuePassing() {
     override val kotlinBridgeType: IrType
         get() = kotlinType

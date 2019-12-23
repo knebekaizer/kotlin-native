@@ -4,10 +4,7 @@
  */
 package org.jetbrains.kotlin.native.interop.gen
 
-import org.jetbrains.kotlin.native.interop.indexer.FunctionDecl
-import org.jetbrains.kotlin.native.interop.indexer.GlobalDecl
-import org.jetbrains.kotlin.native.interop.indexer.VoidType
-import org.jetbrains.kotlin.native.interop.indexer.unwrapTypedefs
+import org.jetbrains.kotlin.native.interop.indexer.*
 
 internal data class CCalleeWrapper(val lines: List<String>)
 
@@ -57,7 +54,12 @@ internal class CWrappersGenerator(private val context: StubIrContext) {
                 val parameters = function.parameters.mapIndexed { index, parameter ->
                     Parameter(parameter.type.getStringRepresentation(), "p$index")
                 }
-                val callExpression = "${function.name}(${parameters.joinToString { it.name }});"
+                val parameterList = function.parameters.mapIndexed { index, parameter ->
+                    val cast = (parameter.type.unwrapTypedefs() as? VectorType)?.let { "(${it.spelling})" } ?: ""
+                    "${cast}p$index"
+                }
+            //    val callExpression = "${function.name}(${parameters.joinToString { it.name }});"
+                val callExpression = "${function.name}(${parameterList.joinToString()});"
                 val wrapperBody = if (function.returnType.unwrapTypedefs() is VoidType) {
                     callExpression
                 } else {
@@ -66,6 +68,7 @@ internal class CWrappersGenerator(private val context: StubIrContext) {
                 val wrapper = createWrapper(symbolName, wrapperName, returnType, parameters, wrapperBody)
                 CCalleeWrapper(wrapper)
             }
+                    .also { println("generateCCalleeWrapper>\n\t${it.lines.joinToString("\n\t")}" ) }
 
     fun generateCGlobalGetter(globalDecl: GlobalDecl, symbolName: String): CCalleeWrapper {
         val wrapperName = generateFunctionWrapperName("${globalDecl.name}_getter")

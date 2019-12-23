@@ -897,6 +897,7 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
     }
 
     private fun getFunction(cursor: CValue<CXCursor>): FunctionDecl {
+        println("getFunction> ${cursor.type.name}")
         val name = clang_getCursorSpelling(cursor).convertAndDispose()
         val returnType = convertType(clang_getCursorResultType(cursor), clang_getCursorResultTypeAttributes(cursor))
 
