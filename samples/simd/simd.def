@@ -1,0 +1,26 @@
+#headers = simd.h
+#headerFilter = simd.h
+package simd
+
+---
+/*
+typedef float __attribute__ ((__vector_size__ (16)))   KVector4f;
+
+static float sendV4F(KVector4f v) {
+	return v[0] + 2 * v[1] + 4 * v[2] + 8 * v[3];
+}
+*/
+
+typedef int   __attribute__ ((__vector_size__ (16)))   KVector4i32;
+
+static int sendV4I(KVector4i32 v) {
+	return v[0] + 2 * v[1] + 4 * v[2] + 8 * v[3];
+}
+
+struct ZZZ { int z; };
+static struct ZZZ getZZZ() { struct ZZZ ret = {42}; return ret; }
+static int  foo(struct ZZZ z) {
+	return z.z;
+}
+
+void bar(KVector4i32, struct ZZZ, float);
