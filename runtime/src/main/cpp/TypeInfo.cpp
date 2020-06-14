@@ -21,7 +21,6 @@
 // TODO: maybe select strategy basing on number of elements.
 #define USE_BINARY_SEARCH 1
 
-extern "C" {
 #if USE_BINARY_SEARCH
 
 void* LookupOpenMethod(const TypeInfo* info, MethodNameHash nameSignature) {
@@ -74,6 +73,4 @@ InterfaceTableRecord const* LookupInterfaceTableRecord(InterfaceTableRecord cons
     else r = m;
   }
   return interfaceTable + l;
-}
-
 }
