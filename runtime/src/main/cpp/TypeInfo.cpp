@@ -23,6 +23,11 @@
 
 #if USE_BINARY_SEARCH
 
+#include "trace.h"
+#include "KUtils.h"
+using konan::std::stdString;
+//using konan::std::toU16String;
+
 void* LookupOpenMethod(const TypeInfo* info, MethodNameHash nameSignature) {
   int bottom = 0;
   int top = info->openMethodsCount_ - 1;
@@ -37,6 +42,14 @@ void* LookupOpenMethod(const TypeInfo* info, MethodNameHash nameSignature) {
       top = middle - 1;
   }
 
+  // debug tracing
+  log_error << "Unknown open method";
+  auto package = stdString(info->packageName_); // createCppString(info->packageName_);
+  auto name = stdString(info->relativeName_);
+  TraceX(package, name, nameSignature);
+  for (auto& m : make_span(info->openMethods_, info->openMethodsCount_)) {
+    TraceX(m.nameSignature_);
+  }
   RuntimeAssert(false, "Unknown open method");
   return nullptr;
 }
