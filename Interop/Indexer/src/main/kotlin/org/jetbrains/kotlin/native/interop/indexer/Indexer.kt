@@ -217,10 +217,10 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
         return StructDeclImpl(typeSpelling, getLocation(cursor))
     }
 
-    private fun visitClass(cursor: CValue<CXCursor>, clazz: StructDefImpl)  {
+    private fun visitClass(classCursor: CValue<CXCursor>, clazz: StructDefImpl)  {
 
         // TODO skip method (function) when encounter UnsupportedType in params or ret value. Otherwise all class methods will be lost due to exception (?)
-        visitChildren(cursor) { cursor, _ ->
+        visitChildren(classCursor) { cursor, _ ->
             if (cursor.isPublic) {
                 // TODO If a kotlin class is _conceptually_ derived from its c++ counterpart, then it shall be able to override virtual private and access protected
                 when (cursor.kind) {
@@ -871,12 +871,15 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
             return
         }
 
+        // TODO: do we need it?
+        /*
         val namespace: Namespace? =
         // semantic parent of any namespace member is always namespace itself (no type aliases etc)
             if (info.semanticContainer!!.pointed.cursor.kind == CXCursorKind.CXCursor_Namespace) {
                 val parent = info.semanticContainer!!.pointed.cursor.readValue()
                 Namespace(getCursorSpelling(parent), getParentName(parent))
             } else null
+        */
 
         if (!cursor.isRecursivelyPublic()) {
             // c++ : skip anon namespaces, static functions and variables and private inner classes
@@ -1141,8 +1144,8 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
     private fun isFuncDeclEligible(cursor: CValue<CXCursor>): Boolean {
 
         var ret = true
-        visitChildren(cursor) { cursor, _ ->
-            when (cursor.kind) {
+        visitChildren(cursor) { childCursor, _ ->
+            when (childCursor.kind) {
                 CXCursorKind.CXCursor_TemplateRef -> {
                     ret = false
                     CXChildVisitResult.CXChildVisit_Break
