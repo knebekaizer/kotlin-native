@@ -186,17 +186,10 @@ internal class StructStubBuilder(
         val companionSuper = superClass.nested("Type")
         val typeSize = listOf(IntegralConstantStub(def.size, 4, true), IntegralConstantStub(def.align.toLong(), 4, true))
         val companionSuperInit = SuperClassInit(companionSuper, typeSize)
-<<<<<<< HEAD
         val companionClassifier = classifier.nested("Companion")
         val annotation = AnnotationStub.CStruct.VarType(def.size, def.align).takeIf {
             context.generationMode == GenerationMode.METADATA
         }
-        val companion = ClassStub.Companion(
-                companionClassifier,
-                superClassInit = companionSuperInit,
-                annotations = listOfNotNull(annotation, AnnotationStub.Deprecated.deprecatedCVariableCompanion)
-        )
-=======
 
         var classMethods: List<FunctionStub> =
                 def.methods
@@ -210,21 +203,20 @@ internal class StructStubBuilder(
                         }.filterNotNull()
         val classFields = def.staticFields
                 .map { field -> (GlobalStubBuilder(context, field).build() as List<PropertyStub>).single() }
-        val companion = ClassStub.Companion(companionSuperInit,
-                properties = classFields,
-                functions = classMethods)
->>>>>>> ecb997130... Limited C++ interop provided via plain C wrappers and cinterop mechanism.
 
+        val companion = ClassStub.Companion(
+            companionClassifier,
+            superClassInit = companionSuperInit,
+            annotations = listOfNotNull(annotation, AnnotationStub.Deprecated.deprecatedCVariableCompanion),
+            properties = classFields,
+            methods = classMethods
+        )
         return listOf(ClassStub.Simple(
                 classifier,
                 origin = origin,
                 properties = fields.filterNotNull() + if (platform == KotlinPlatform.NATIVE) bitFields else emptyList(),
-<<<<<<< HEAD
                 constructors = listOf(primaryConstructor),
-                methods = emptyList(),
-=======
-                functions = methods,
->>>>>>> ecb997130... Limited C++ interop provided via plain C wrappers and cinterop mechanism.
+                methods = methods,
                 modality = ClassStubModality.NONE,
                 annotations = listOfNotNull(structAnnotation),
                 superClassInit = superClassInit,
@@ -659,41 +651,34 @@ internal class GlobalStubBuilder(
         val kind: PropertyStub.Kind
         if (unwrappedType is ArrayType) {
             kotlinType = (mirror as TypeMirror.ByValue).valueType
-<<<<<<< HEAD
             val getter = when (context.platform) {
                 KotlinPlatform.JVM -> {
                     PropertyAccessor.Getter.SimpleGetter().also {
-                        val extra = BridgeGenerationInfo(global.name, mirror.info)
+                        val extra = BridgeGenerationInfo(global.fullName, mirror.info)
                         context.bridgeComponentsBuilder.arrayGetterBridgeInfo[it] = extra
                     }
                 }
                 KotlinPlatform.NATIVE -> {
-                    val cCallAnnotation = AnnotationStub.CCall.Symbol("${context.generateNextUniqueId("knifunptr_")}_${global.name}_getter")
+                    val cCallAnnotation = AnnotationStub.CCall.Symbol("${context.generateNextUniqueId("knifunptr_")}_${global.fullName}_getter")
                     PropertyAccessor.Getter.ExternalGetter(listOf(cCallAnnotation)).also {
                         context.wrapperComponentsBuilder.getterToWrapperInfo[it] = WrapperGenerationInfo(global)
                     }
                 }
             }
-=======
-            val getter = PropertyAccessor.Getter.SimpleGetter()
-            val extra = BridgeGenerationComponents.GlobalGetterBridgeInfo(global.fullName, mirror.info, isArray = true)
-            context.bridgeComponentsBuilder.getterToBridgeInfo[getter] = extra
->>>>>>> ecb997130... Limited C++ interop provided via plain C wrappers and cinterop mechanism.
             kind = PropertyStub.Kind.Val(getter)
         } else {
             when (mirror) {
                 is TypeMirror.ByValue -> {
                     kotlinType = mirror.argType
-<<<<<<< HEAD
                     val getter = when (context.platform) {
                         KotlinPlatform.JVM -> {
                             PropertyAccessor.Getter.SimpleGetter().also {
-                                val getterExtra = BridgeGenerationInfo(global.name, mirror.info)
+                                val getterExtra = BridgeGenerationInfo(global.fullName, mirror.info)
                                 context.bridgeComponentsBuilder.getterToBridgeInfo[it] = getterExtra
                             }
                         }
                         KotlinPlatform.NATIVE -> {
-                            val cCallAnnotation = AnnotationStub.CCall.Symbol("${context.generateNextUniqueId("knifunptr_")}_${global.name}_getter")
+                            val cCallAnnotation = AnnotationStub.CCall.Symbol("${context.generateNextUniqueId("knifunptr_")}_${global.fullName}_getter")
                             PropertyAccessor.Getter.ExternalGetter(listOf(cCallAnnotation)).also {
                                 context.wrapperComponentsBuilder.getterToWrapperInfo[it] = WrapperGenerationInfo(global)
                             }
@@ -705,48 +690,33 @@ internal class GlobalStubBuilder(
                         val setter = when (context.platform) {
                             KotlinPlatform.JVM -> {
                                 PropertyAccessor.Setter.SimpleSetter().also {
-                                    val setterExtra = BridgeGenerationInfo(global.name, mirror.info)
+                                    val setterExtra = BridgeGenerationInfo(global.fullName, mirror.info)
                                     context.bridgeComponentsBuilder.setterToBridgeInfo[it] = setterExtra
                                 }
                             }
                             KotlinPlatform.NATIVE -> {
-                                val cCallAnnotation = AnnotationStub.CCall.Symbol("${context.generateNextUniqueId("knifunptr_")}_${global.name}_setter")
+                                val cCallAnnotation = AnnotationStub.CCall.Symbol("${context.generateNextUniqueId("knifunptr_")}_${global.fullName}_setter")
                                 PropertyAccessor.Setter.ExternalSetter(listOf(cCallAnnotation)).also {
                                     context.wrapperComponentsBuilder.setterToWrapperInfo[it] = WrapperGenerationInfo(global)
                                 }
                             }
                         }
-=======
-                    val getter = PropertyAccessor.Getter.SimpleGetter()
-                    val getterExtra = BridgeGenerationComponents.GlobalGetterBridgeInfo(global.fullName, mirror.info, isArray = false)
-                    context.bridgeComponentsBuilder.getterToBridgeInfo[getter] = getterExtra
-                    kind = if (global.isConst) {
-                        PropertyStub.Kind.Val(getter)
-                    } else {
-                        val setter = PropertyAccessor.Setter.SimpleSetter()
-                        val setterExtra = BridgeGenerationComponents.GlobalSetterBridgeInfo(global.fullName, mirror.info)
-                        context.bridgeComponentsBuilder.setterToBridgeInfo[setter] = setterExtra
->>>>>>> ecb997130... Limited C++ interop provided via plain C wrappers and cinterop mechanism.
                         PropertyStub.Kind.Var(getter, setter)
                     }
                 }
                 is TypeMirror.ByRef -> {
                     kotlinType = mirror.pointedType
-<<<<<<< HEAD
                     val getter = when (context.generationMode) {
                         GenerationMode.SOURCE_CODE -> {
-                            PropertyAccessor.Getter.InterpretPointed(global.name, kotlinType.toStubIrType())
+                            PropertyAccessor.Getter.InterpretPointed(global.fullName, kotlinType.toStubIrType())
                         }
                         GenerationMode.METADATA -> {
-                            val cCallAnnotation = AnnotationStub.CCall.Symbol("${context.generateNextUniqueId("knifunptr_")}_${global.name}_getter")
+                            val cCallAnnotation = AnnotationStub.CCall.Symbol("${context.generateNextUniqueId("knifunptr_")}_${global.fullName}_getter")
                             PropertyAccessor.Getter.ExternalGetter(listOf(cCallAnnotation)).also {
                                 context.wrapperComponentsBuilder.getterToWrapperInfo[it] = WrapperGenerationInfo(global, passViaPointer = true)
                             }
                         }
                     }
-=======
-                    val getter = PropertyAccessor.Getter.InterpretPointed(global.fullName, WrapperStubType(kotlinType))
->>>>>>> ecb997130... Limited C++ interop provided via plain C wrappers and cinterop mechanism.
                     kind = PropertyStub.Kind.Val(getter)
                 }
             }
