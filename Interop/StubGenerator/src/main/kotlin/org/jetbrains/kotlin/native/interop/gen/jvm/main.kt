@@ -347,6 +347,7 @@ private fun processCLib(flavor: KotlinPlatform, cinteropArguments: CInteropArgum
             val outOFile = tempFiles.create(libName,".o")
             val compilerCmd = arrayOf(compiler, *compilerArgs,
                     "-c", outCFile.absolutePath, "-o", outOFile.absolutePath)
+            if (verbose) println("COMPILER: " + compilerCmd.joinToString(" "))
             runCmd(compilerCmd, verbose)
 
             val outLib = File(nativeLibsDir, System.mapLibraryName(libName))
@@ -360,7 +361,7 @@ private fun processCLib(flavor: KotlinPlatform, cinteropArguments: CInteropArgum
             val outLib = File(nativeLibsDir, "$libName.bc")
             val compilerCmd = arrayOf(compiler, *compilerArgs,
                     "-emit-llvm", "-c", outCFile.absolutePath, "-o", outLib.absolutePath)
-
+            if (verbose) println("COMPILER: " + compilerCmd.joinToString(" "))
             runCmd(compilerCmd, verbose)
             outLib.absolutePath
         }
