@@ -57,7 +57,21 @@ internal class CWrappersGenerator(private val context: StubIrContext) {
                 val parameters = function.parameters.mapIndexed { index, parameter ->
                     Parameter(parameter.type.getStringRepresentation(), "p$index")
                 }
-                val callExpression = "${function.name}(${parameters.joinToString { it.name }});"
+                // val callExpression = "${function.name}(${parameters.joinToString { it.name }});"
+                val callExpression = with (function) {
+                    when  {
+                        isCxxInstanceMethod ->
+                            "(${parameters[0].name})->${name}(${parameters.drop(1).joinToString{it.name}});"
+                        isCxxConstructor ->
+                            "new(${parameters[0].name}) ${cxxReceiverClass!!.spelling}(${parameters.drop(1)
+                                .joinToString {it.name}});"
+                        isCxxDestructor ->
+                            "(${parameters[0].name})->~${cxxReceiverClass!!.spelling.substringAfterLast(':')}();"
+                        else ->
+                            "${fullName}(${parameters.joinToString {it.name}});"
+                    }
+                }
+
                 val wrapperBody = if (function.returnType.unwrapTypedefs() is VoidType) {
                     callExpression
                 } else {
