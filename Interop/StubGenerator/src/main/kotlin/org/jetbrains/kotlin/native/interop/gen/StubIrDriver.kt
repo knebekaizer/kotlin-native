@@ -25,6 +25,7 @@ class StubIrContext(
             includes = mutableListOf<String>().apply {
                 add("stdint.h")
                 add("string.h")
+                add("stdbool.h")
                 if (platform == KotlinPlatform.JVM) {
                     add("jni.h")
                 }

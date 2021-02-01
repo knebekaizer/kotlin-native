@@ -7,15 +7,10 @@ package org.jetbrains.kotlin.backend.konan.ir.interop.cstruct
 import org.jetbrains.kotlin.backend.konan.InteropBuiltIns
 import org.jetbrains.kotlin.backend.konan.ir.interop.DescriptorToIrTranslationMixin
 import org.jetbrains.kotlin.backend.konan.ir.interop.irInstanceInitializer
-import org.jetbrains.kotlin.descriptors.CallableMemberDescriptor
-import org.jetbrains.kotlin.descriptors.ClassDescriptor
-import org.jetbrains.kotlin.descriptors.PropertyDescriptor
+import org.jetbrains.kotlin.descriptors.*
 import org.jetbrains.kotlin.ir.builders.irBlockBody
 import org.jetbrains.kotlin.ir.builders.irGet
-import org.jetbrains.kotlin.ir.declarations.IrClass
-import org.jetbrains.kotlin.ir.declarations.IrConstructor
-import org.jetbrains.kotlin.ir.declarations.IrDeclarationContainer
-import org.jetbrains.kotlin.ir.declarations.addMember
+import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.descriptors.IrBuiltIns
 import org.jetbrains.kotlin.ir.expressions.impl.IrDelegatingConstructorCallImpl
 import org.jetbrains.kotlin.ir.util.*
@@ -49,11 +44,18 @@ internal class CStructVarClassGenerator(
                 irClass.addMember(createPrimaryConstructor(irClass))
                 irClass.addMember(companionGenerator.generate(descriptor))
                 descriptor.unsubstitutedMemberScope
-                        .getContributedDescriptors()
-                        .filterIsInstance<PropertyDescriptor>()
-                        .filter { it.kind != CallableMemberDescriptor.Kind.FAKE_OVERRIDE }
-                        .map(this::createProperty)
-                        .forEach(irClass::addMember)
+                    .getContributedDescriptors()
+                    .filterIsInstance<CallableMemberDescriptor>()
+                    .filterNot { it.kind == CallableMemberDescriptor.Kind.FAKE_OVERRIDE }
+                    .map {
+                        when (it) {
+                            is PropertyDescriptor -> createProperty(it)
+                            is SimpleFunctionDescriptor -> createFunction(it)
+                            else -> null
+                        }
+                    }
+                    .filterIsInstance<IrDeclaration>()
+                    .forEach(irClass::addMember)
             }
 
     private fun createPrimaryConstructor(irClass: IrClass): IrConstructor {
