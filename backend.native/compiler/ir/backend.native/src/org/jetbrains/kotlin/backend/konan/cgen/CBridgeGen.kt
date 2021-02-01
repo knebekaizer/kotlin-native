@@ -111,9 +111,20 @@ private fun KotlinToCCallBuilder.buildKotlinBridgeCall(transformCall: (IrMemberA
                 transformCall
         )
 
+private fun IrType.isCStructCompanion(): Boolean {
+    val companion = this.classOrNull?.owner ?: return false
+    if (!companion.isCompanion) return false
+    val clazz = companion.parent
+    if (clazz !is IrClass) return false
+    return clazz.hasAnnotation(RuntimeNames.cStruct)
+}
+
+
+private fun IrType.isCStruct(): Boolean= this.classOrNull?.owner?.hasAnnotation(RuntimeNames.cStruct) ?: false
+
 internal fun KotlinStubs.generateCCall(expression: IrCall, builder: IrBuilderWithScope, isInvoke: Boolean,
                                        foreignExceptionMode: ForeignExceptionMode.Mode = ForeignExceptionMode.default): IrExpression {
-    require(expression.dispatchReceiver == null) { renderCompilerError(expression) }
+//    require(expression.dispatchReceiver == null) { renderCompilerError(expression) }
 
     val callBuilder = KotlinToCCallBuilder(builder, this, isObjCMethod = false, foreignExceptionMode)
 
@@ -148,7 +159,18 @@ internal fun KotlinStubs.generateCCall(expression: IrCall, builder: IrBuilderWit
         val arguments = (0 until expression.valueArgumentsCount).map {
             expression.getValueArgument(it)
         }
-        callBuilder.addArguments(arguments, callee)
+        // TODO: it's a hack!
+        // We'd better check something like "expression.isCXXMethod", "expression.isCXXConstructor".
+        // But we only have an IR expression.
+        // With @CStruct annotation though.
+        val receiver = expression.dispatchReceiver
+        val self: List<IrExpression> = when {
+            receiver == null -> emptyList()
+            receiver.type.isCStructCompanion() -> emptyList()
+            receiver.type.isCStruct() -> listOf(receiver)
+            else -> error("Unexpected dispatch receiver: ${receiver.render()} FOR ${expression.render()}")
+        }
+        callBuilder.addArguments(self + arguments, callee)
     }
 
     val returnValuePassing = if (isInvoke) {
@@ -176,7 +198,13 @@ internal fun KotlinStubs.generateCCall(expression: IrCall, builder: IrBuilderWit
 
 private fun KotlinToCCallBuilder.addArguments(arguments: List<IrExpression?>, callee: IrFunction) {
     arguments.forEachIndexed { index, argument ->
-        val parameter = callee.valueParameters[index]
+        val parameter = if (callee.dispatchReceiverParameter != null &&
+            (callee.dispatchReceiverParameter?.type?.isCStruct() == true)) {
+
+            if (index == 0) callee.dispatchReceiverParameter!! else callee.valueParameters[index-1]
+        } else {
+            callee.valueParameters[index]
+        }
         if (parameter.isVararg) {
             require(index == arguments.lastIndex) { stubs.renderCompilerError(argument) }
             addVariadicArguments(argument)
@@ -738,7 +766,7 @@ private fun KotlinStubs.mapType(
 
     type.isObjCReferenceType(target, irBuiltIns) -> ObjCReferenceValuePassing(symbols, type, retained = retained)
 
-    else -> throwCompilerError(location, "doesn't correspond to any C type")
+    else -> throwCompilerError(location, "doesn't correspond to any C type: ${type.render()}")
 }
 
 private class CExpression(val expression: String, val type: CType)

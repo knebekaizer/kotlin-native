@@ -4,10 +4,7 @@
  */
 package org.jetbrains.kotlin.native.interop.gen
 
-import org.jetbrains.kotlin.native.interop.indexer.FunctionDecl
-import org.jetbrains.kotlin.native.interop.indexer.GlobalDecl
-import org.jetbrains.kotlin.native.interop.indexer.VoidType
-import org.jetbrains.kotlin.native.interop.indexer.unwrapTypedefs
+import org.jetbrains.kotlin.native.interop.indexer.*
 
 internal data class CCalleeWrapper(val lines: List<String>)
 
@@ -27,8 +24,8 @@ internal class CWrappersGenerator(private val context: StubIrContext) {
     }
 
     private fun bindSymbolToFunction(symbol: String, function: String): List<String> = listOf(
-            "const void* $symbol __asm(${symbol.quoteAsKotlinLiteral()});",
-            "const void* $symbol = &$function;"
+            "extern \"C\" const void* $symbol __asm(${symbol.quoteAsKotlinLiteral()});",
+            "extern \"C\" const void* $symbol = (const void*)&$function;"
     )
 
     private data class Parameter(val type: String, val name: String)
@@ -54,30 +51,69 @@ internal class CWrappersGenerator(private val context: StubIrContext) {
                 val wrapperName = generateFunctionWrapperName(function.name)
 
                 val returnType = function.returnType.getStringRepresentation()
-                val parameters = function.parameters.mapIndexed { index, parameter ->
-                    Parameter(parameter.type.getStringRepresentation(), "p$index")
+                val parameters1 = function.parameters.mapIndexed { index, parameter ->
+                    Parameter(parameter.type.getStringRepresentation(/*context.configuration.library.language*/), "p$index")
                 }
+                val parameters = function.parameters.mapIndexed { index, parameter ->
+
+                    val parameterTypeText = parameter.type.getStringRepresentation()
+                    val type = parameter.type
+                    val unwrappedType = type.unwrapTypedefs()
+
+                    val typeExpression = if (context.configuration.library.language == Language.CPP) {
+                        val cppRefTypePrefix =
+                            if (unwrappedType is PointerType && unwrappedType.isLVReference) "*" else ""
+                        when {
+                            type is Typedef ->
+                                "(${type.def.name})"
+                            type is PointerType && type.spelling != null ->
+                                "(${type.spelling})$cppRefTypePrefix"
+                            unwrappedType is EnumType ->
+                                "(${unwrappedType.def.spelling})"
+                            unwrappedType is RecordType ->
+                                "*(${unwrappedType.decl.spelling}*)"
+                            else ->
+                                "$cppRefTypePrefix($parameterTypeText)"
+                                //cppRefTypePrefix +
+                                //            mirror(declarationMapper, type).info.cFromBridged(
+                                //                bridgeNativeValues[index], scope, nativeBacked
+                                //            )
+
+                        }
+                    } else "($parameterTypeText)"
+
+                    // Dont' use Parameter here. It is just a type expression and a name pair.
+                    Parameter(typeExpression, "p$index")
+                }
+
                 // val callExpression = "${function.name}(${parameters.joinToString { it.name }});"
                 val callExpression = with (function) {
                     when  {
-                        isCxxInstanceMethod ->
-                            "(${parameters[0].name})->${name}(${parameters.drop(1).joinToString{it.name}});"
-                        isCxxConstructor ->
-                            "new(${parameters[0].name}) ${cxxReceiverClass!!.spelling}(${parameters.drop(1)
-                                .joinToString {it.name}});"
+                        isCxxInstanceMethod -> {
+                            val parametersPart = parameters.drop(1).joinToString {
+                                "${it.type}${it.name}"
+                            }
+                            "(${parameters[0].name})->${name}($parametersPart)"
+                        }
+                        isCxxConstructor -> {
+                            val parametersPart = parameters.drop(1).joinToString {
+                                "${it.type}${it.name}"
+                            }
+                            "new(${parameters[0].name}) ${cxxReceiverClass!!.spelling}($parametersPart)"
+                        }
                         isCxxDestructor ->
-                            "(${parameters[0].name})->~${cxxReceiverClass!!.spelling.substringAfterLast(':')}();"
+                            "(${parameters[0].name})->~${cxxReceiverClass!!.spelling.substringAfterLast(':')}()"
                         else ->
-                            "${fullName}(${parameters.joinToString {it.name}});"
+                            "${fullName}(${parameters.joinToString {it.name}})"
                     }
                 }
 
                 val wrapperBody = if (function.returnType.unwrapTypedefs() is VoidType) {
-                    callExpression
+                    "$callExpression;"
                 } else {
-                    "return $callExpression"
+                    "return (${returnType})($callExpression);"
                 }
-                val wrapper = createWrapper(symbolName, wrapperName, returnType, parameters, wrapperBody)
+                val wrapper = createWrapper(symbolName, wrapperName, returnType, parameters1, wrapperBody)
                 CCalleeWrapper(wrapper)
             }
 
