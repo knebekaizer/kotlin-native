@@ -23,10 +23,18 @@ internal class CWrappersGenerator(private val context: StubIrContext) {
         return "${packageName}_${functionName}_wrapper${currentFunctionWrapperId++}"
     }
 
-    private fun bindSymbolToFunction(symbol: String, function: String): List<String> = listOf(
-            "extern \"C\" const void* $symbol __asm(${symbol.quoteAsKotlinLiteral()});",
-            "extern \"C\" const void* $symbol = (const void*)&$function;"
-    )
+    private fun bindSymbolToFunction(symbol: String, function: String): List<String> =
+        if (context.configuration.library.language == Language.CPP) {
+            listOf(
+                "extern \"C\" const void* $symbol __asm(${symbol.quoteAsKotlinLiteral()});",
+                "extern \"C\" const void* $symbol = (const void*)&$function;"
+            )
+        } else {
+            listOf(
+                "const void* $symbol __asm(${symbol.quoteAsKotlinLiteral()});",
+                "const void* $symbol = &$function;"
+            )
+        }
 
     private data class Parameter(val type: String, val name: String)
 

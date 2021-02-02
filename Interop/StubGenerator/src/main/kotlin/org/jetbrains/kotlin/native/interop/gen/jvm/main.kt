@@ -488,7 +488,13 @@ internal fun buildNativeLibrary(
         addAll(getCompilerFlagsForVfsOverlay(arguments.headerFilterPrefix.toTypedArray(), def))
         addAll(when (language) {
             Language.C -> emptyList()
-            Language.CPP -> if (cppOptions) emptyList() else listOf("-x", "c++")
+            Language.CPP -> {
+                if (cppOptions)
+                    emptyList()
+                else
+                    // TODO: should this include be here or is it just a misconfiguration on my side?
+                    listOf("-x", "c++", "-I${tool.clang.absoluteTargetToolchain}/usr/include/c++/v1")
+            }
             Language.OBJECTIVE_C -> {
                 // "Objective-C" within interop means "Objective-C with ARC":
                 listOf("-fobjc-arc")
