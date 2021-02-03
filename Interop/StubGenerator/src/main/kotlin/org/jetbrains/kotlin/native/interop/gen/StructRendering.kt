@@ -11,7 +11,9 @@ fun tryRenderStructOrUnion(def: StructDef): String? = when (def.kind) {
 private fun tryRenderStruct(def: StructDef): String? {
     val isPackedStruct = def.fields.any { !it.isAligned }
 
-    var offset = 0L
+    // TODO: Need to properly account for C++ vtable size.
+    // How do we obtain the first field offset from libclang?
+    var offset = if (def.kind == StructDef.Kind.CLASS) 8L else 0L
 
     return buildString {
         append("struct")

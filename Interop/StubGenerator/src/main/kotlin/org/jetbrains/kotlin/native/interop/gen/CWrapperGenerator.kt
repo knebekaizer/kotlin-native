@@ -59,10 +59,17 @@ internal class CWrappersGenerator(private val context: StubIrContext) {
                 val wrapperName = generateFunctionWrapperName(function.name)
 
                 val returnType = function.returnType.getStringRepresentation()
-                val parameters1 = function.parameters.mapIndexed { index, parameter ->
-                    Parameter(parameter.type.getStringRepresentation(/*context.configuration.library.language*/), "p$index")
+                val unwrappedReturnType = function.returnType.unwrapTypedefs()
+                val returnTypePrefix =
+                    if (unwrappedReturnType is PointerType && unwrappedReturnType.isLVReference) "&" else ""
+
+                val signatureParameters = function.parameters.mapIndexed { index, parameter ->
+                    val type = parameter.type.getStringRepresentation()
+                    val forcePointer = if (parameter.type.unwrapTypedefs() is RecordType) "*" else ""
+                    Parameter(type+forcePointer, "p$index")
                 }
-                val parameters = function.parameters.mapIndexed { index, parameter ->
+                // println("SIGNATURE PARAMETERS = ${signatureParameters}")
+                val bodyParameters = function.parameters.mapIndexed { index, parameter ->
 
                     val parameterTypeText = parameter.type.getStringRepresentation()
                     val type = parameter.type
@@ -82,14 +89,10 @@ internal class CWrappersGenerator(private val context: StubIrContext) {
                                 "*(${unwrappedType.decl.spelling}*)"
                             else ->
                                 "$cppRefTypePrefix($parameterTypeText)"
-                                //cppRefTypePrefix +
-                                //            mirror(declarationMapper, type).info.cFromBridged(
-                                //                bridgeNativeValues[index], scope, nativeBacked
-                                //            )
-
                         }
                     } else "($parameterTypeText)"
 
+                    // println(Parameter(typeExpression, "p$index"))
                     // Dont' use Parameter here. It is just a type expression and a name pair.
                     Parameter(typeExpression, "p$index")
                 }
@@ -98,30 +101,33 @@ internal class CWrappersGenerator(private val context: StubIrContext) {
                 val callExpression = with (function) {
                     when  {
                         isCxxInstanceMethod -> {
-                            val parametersPart = parameters.drop(1).joinToString {
+                            val parametersPart = bodyParameters.drop(1).joinToString {
                                 "${it.type}${it.name}"
                             }
-                            "(${parameters[0].name})->${name}($parametersPart)"
+                            "(${bodyParameters[0].name})->${name}($parametersPart)"
                         }
                         isCxxConstructor -> {
-                            val parametersPart = parameters.drop(1).joinToString {
+                            val parametersPart = bodyParameters.drop(1).joinToString {
                                 "${it.type}${it.name}"
                             }
-                            "new(${parameters[0].name}) ${cxxReceiverClass!!.spelling}($parametersPart)"
+                            "new(${bodyParameters[0].name}) ${cxxReceiverClass!!.spelling}($parametersPart)"
                         }
                         isCxxDestructor ->
-                            "(${parameters[0].name})->~${cxxReceiverClass!!.spelling.substringAfterLast(':')}()"
+                            "(${bodyParameters[0].name})->~${cxxReceiverClass!!.spelling.substringAfterLast(':')}()"
                         else ->
-                            "${fullName}(${parameters.joinToString {it.name}})"
+                            if (context.configuration.library.language == Language.CPP)
+                                "${fullName}(${bodyParameters.joinToString {"${it.type}${it.name}"}})"
+                            else
+                                "${fullName}(${bodyParameters.joinToString {it.name}})"
                     }
                 }
 
                 val wrapperBody = if (function.returnType.unwrapTypedefs() is VoidType) {
                     "$callExpression;"
                 } else {
-                    "return (${returnType})($callExpression);"
+                    "return (${returnType})$returnTypePrefix($callExpression);"
                 }
-                val wrapper = createWrapper(symbolName, wrapperName, returnType, parameters1, wrapperBody)
+                val wrapper = createWrapper(symbolName, wrapperName, returnType, signatureParameters, wrapperBody)
                 CCalleeWrapper(wrapper)
             }
 
