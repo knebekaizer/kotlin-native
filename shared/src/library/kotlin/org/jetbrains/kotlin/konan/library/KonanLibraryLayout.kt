@@ -32,6 +32,8 @@ interface TargetedKotlinLibraryLayout : KotlinLibraryLayout {
         get() = File(targetsDir, target!!.visibleName)
     val includedDir
         get() = File(targetDir, "included")
+    val preamble
+        get() = File(targetDir, "preamble.cpp")
 }
 
 interface BitcodeKotlinLibraryLayout : TargetedKotlinLibraryLayout, KotlinLibraryLayout {

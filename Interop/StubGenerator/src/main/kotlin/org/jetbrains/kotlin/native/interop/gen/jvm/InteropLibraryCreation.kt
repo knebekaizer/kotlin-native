@@ -35,7 +35,8 @@ fun createInteropLibrary(
         dependencies: List<KotlinLibrary>,
         nopack: Boolean,
         shortName: String?,
-        staticLibraries: List<String>
+        staticLibraries: List<String>,
+        completePreamble: List<String>
 ) {
     val version = KotlinLibraryVersioning(
             libraryVersion = null,
@@ -63,6 +64,8 @@ fun createInteropLibrary(
         addManifestAddend(manifest)
         addLinkDependencies(dependencies)
         staticLibraries.forEach(this::addIncludedBinary)
+        // TODO: incorporate me into the layout.
+        if (completePreamble.isNotEmpty()) layout.targetDir.child("preamble.cpp").writeLines(completePreamble)
         commit()
     }
 }

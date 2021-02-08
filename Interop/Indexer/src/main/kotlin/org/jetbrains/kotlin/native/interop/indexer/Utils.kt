@@ -336,7 +336,12 @@ internal fun Compilation.withPrecompiledHeader(translationUnit: CXTranslationUni
     val precompiledHeader = Files.createTempFile(null, ".pch").toFile().apply { this.deleteOnExit() }
     clang_saveTranslationUnit(translationUnit, precompiledHeader.absolutePath, 0)
 
-    return CompilationWithPCH(this.compilerArgs, precompiledHeader.absolutePath, this.language)
+    return CompilationWithPCH(
+        this,
+        this.compilerArgs,
+        precompiledHeader.absolutePath,
+        this.language
+    )
 }
 
 internal fun NativeLibrary.includesDeclaration(cursor: CValue<CXCursor>): Boolean {

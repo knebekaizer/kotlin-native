@@ -397,7 +397,12 @@ private fun processCLib(flavor: KotlinPlatform, cinteropArguments: CInteropArgum
                     dependencies = stdlibDependency + imports.requiredLibraries.toList(),
                     nopack = nopack,
                     shortName = cinteropArguments.shortModuleName,
-                    staticLibraries = resolveLibraries(staticLibraries, libraryPaths)
+                    staticLibraries = resolveLibraries(staticLibraries, libraryPaths),
+                    completePreamble =
+                        if (stubIrContext.configuration.library.language == Language.CPP) {
+                            stubIrContext.libraryForCStubs.original.includes.map { "#include \"$it\"" } +
+                                    stubIrContext.configuration.library.original.preambleLines
+                        } else emptyList()
             )
             return null
         }

@@ -1,11 +1,15 @@
 package org.jetbrains.kotlin.native.interop.gen
 
+import clang.CXTypeKind
+import clang.clang_Type_getSizeOf
 import org.jetbrains.kotlin.native.interop.indexer.*
 
 fun tryRenderStructOrUnion(def: StructDef): String? = when (def.kind) {
     StructDef.Kind.STRUCT -> tryRenderStruct(def)
     StructDef.Kind.UNION -> tryRenderUnion(def)
-    StructDef.Kind.CLASS -> tryRenderStruct(def)
+    StructDef.Kind.CLASS -> def.decl.spelling.also {
+        println("SPELL FOR C++ as $it")
+    } //tryRenderStruct(def)
 }
 
 private fun tryRenderStruct(def: StructDef): String? {

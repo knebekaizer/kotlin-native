@@ -45,6 +45,7 @@ import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.resolve.descriptorUtil.fqNameSafe
 import org.jetbrains.kotlin.resolve.descriptorUtil.module
 import org.jetbrains.kotlin.konan.ForeignExceptionMode
+import org.jetbrains.kotlin.konan.library.KonanLibrary
 
 internal class InteropLowering(context: Context) : FileLoweringPass {
     // TODO: merge these lowerings.
@@ -83,12 +84,20 @@ private abstract class BaseInteropIrTransformer(private val context: Context) : 
             override val irBuiltIns get() = context.irBuiltIns
             override val symbols get() = context.ir.symbols
 
+            override val klib: KonanLibrary? get() {
+                val expression = element ?: builder.scope.scopeOwnerSymbol.owner as? IrDeclaration
+                println("DETECT KLIB for ${expression?.render()}\n\t->${(expression as? IrCall)?.symbol?.owner}\n\t->${(expression as? IrCall)?.symbol?.owner?.konanLibrary}")
+                return (expression as? IrCall)?.symbol?.owner?.konanLibrary as? KonanLibrary
+            }
+
             override fun addKotlin(declaration: IrDeclaration) {
                 addTopLevel(declaration)
             }
 
             override fun addC(lines: List<String>) {
-                context.cStubsManager.addStub(location, lines)
+                println("KOTLIN STUBS OBJECT: ADDC to cStubsManager")
+                println(lines.map{"\t$it"}.joinToString("\n"))
+                context.cStubsManager.addStub(location, lines, klib)
             }
 
             override fun getUniqueCName(prefix: String) =
@@ -862,7 +871,10 @@ private class InteropTransformer(val context: Context, override val irFile: IrFi
             val exceptionMode = ForeignExceptionMode.byValue(
                     function.konanLibrary?.manifestProperties?.getProperty(ForeignExceptionMode.manifestKey)
             )
-            return generateWithStubs { generateCCall(expression, builder, isInvoke = false, exceptionMode) }
+            println("FOUND a call with @CCall annotation: ")
+            println("\t${expression.render()}")
+            println("GENERATING STUBS AND CALL")
+            return generateWithStubs(expression) { generateCCall(expression, builder, isInvoke = false, exceptionMode) }
         }
 
         val failCompilation = { msg: String -> error(irFile, expression, msg) }

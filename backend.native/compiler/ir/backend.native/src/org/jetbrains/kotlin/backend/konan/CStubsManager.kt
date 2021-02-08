@@ -89,6 +89,6 @@ class CStubsManager(private val target: KonanTarget) {
     }
 
     private val stubs = mutableListOf<Stub>()
-    private class Stub(val kotlinLocation: CompilerMessageLocation?, val lines: List<String>)
+    private class Stub(val kotlinLocation: CompilerMessageLocation?, val lines: List<String>, val klib: KonanLibrary?)
     private var counter = 0
 }

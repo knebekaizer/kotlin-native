@@ -47,8 +47,10 @@ val CompilerOutputKind.isCache: Boolean
     get() = (this == CompilerOutputKind.STATIC_CACHE || this == CompilerOutputKind.DYNAMIC_CACHE)
 
 internal fun produceCStubs(context: Context) {
+    println("PRODUCE C STUBS is a phase")
     val llvmModule = context.llvmModule!!
-    context.cStubsManager.compile(context.config.clang, context.messageCollector, context.inVerbosePhase)?.let {
+    context.cStubsManager.compile(context.config.clang, context.messageCollector, context.inVerbosePhase).forEach {
+        println("LINK C STUBS file ${it.absoluteFile}")
         parseAndLinkBitcodeFile(llvmModule, it.absolutePath)
     }
 }

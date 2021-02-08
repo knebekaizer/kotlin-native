@@ -59,12 +59,13 @@ interface Compilation {
 }
 
 data class CompilationWithPCH(
+        val original: Compilation,
         override val compilerArgs: List<String>,
         override val language: Language
 ) : Compilation {
-
-    constructor(compilerArgs: List<String>, precompiledHeader: String, language: Language)
-            : this(compilerArgs + listOf("-include-pch", precompiledHeader), language)
+    init { println(this) }
+    constructor(original: Compilation, compilerArgs: List<String>, precompiledHeader: String, language: Language)
+            : this(original, compilerArgs + listOf("-include-pch", precompiledHeader), language)
 
     override val includes: List<String>
         get() = emptyList()

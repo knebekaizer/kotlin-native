@@ -51,6 +51,7 @@ open class ExtractingTargetedLibraryImpl(zipped: TargetedLibraryLayoutImpl) :
     TargetedKotlinLibraryLayout {
 
     override val includedDir: File by lazy { zipped.extractDir(zipped.includedDir) }
+    override val preamble: File by lazy { zipped.extract(zipped.preamble) }
 }
 
 class ExtractingBitcodeLibraryImpl(zipped: BitcodeLibraryLayoutImpl) :

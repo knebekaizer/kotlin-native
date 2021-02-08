@@ -9,6 +9,7 @@ const val KLIB_PROPERTY_INCLUDED_HEADERS = "includedHeaders"
 interface TargetedLibrary {
     val targetList: List<String>
     val includedPaths: List<String>
+    val preamblePath: String?
 }
 
 interface BitcodeLibrary : TargetedLibrary {

@@ -51,6 +51,11 @@ open class TargetedLibraryImpl(
         get() = access.realFiles {
             it.includedDir.listFilesOrEmpty.map { it.absolutePath }
         }
+
+    override val preamblePath: String?
+        get() = access.realFiles {
+            it.preamble.let { if (it.exists) it.absolutePath else null }
+        }
 }
 
 open class BitcodeLibraryImpl(

@@ -40,6 +40,7 @@ import org.jetbrains.kotlin.ir.symbols.impl.IrValueParameterSymbolImpl
 import org.jetbrains.kotlin.ir.types.*
 import org.jetbrains.kotlin.ir.util.*
 import org.jetbrains.kotlin.konan.ForeignExceptionMode
+import org.jetbrains.kotlin.konan.library.KonanLibrary
 import org.jetbrains.kotlin.konan.target.Family
 import org.jetbrains.kotlin.konan.target.KonanTarget
 import org.jetbrains.kotlin.name.Name
@@ -50,6 +51,7 @@ internal interface KotlinStubs {
     val irBuiltIns: IrBuiltIns
     val symbols: KonanSymbols
     val target: KonanTarget
+    val klib: KonanLibrary?
     fun addKotlin(declaration: IrDeclaration)
     fun addC(lines: List<String>)
     fun getUniqueCName(prefix: String): String
@@ -188,7 +190,7 @@ internal fun KotlinStubs.generateCCall(expression: IrCall, builder: IrBuilderWit
         callBuilder.cBridgeBodyLines.add(0, "$targetFunctionVariable = ${targetPtrParameter!!};")
     } else {
         val cCallSymbolName = callee.getAnnotationArgumentValue<String>(RuntimeNames.cCall, "id")!!
-        this.addC(listOf("extern const $targetFunctionVariable __asm(\"$cCallSymbolName\");")) // Exported from cinterop stubs.
+        this.addC(listOf("extern /*const*/ $targetFunctionVariable __asm(\"$cCallSymbolName\");")) // Exported from cinterop stubs.
     }
 
     callBuilder.emitCBridge()
@@ -911,9 +913,23 @@ private class StructValuePassing(private val kotlinClass: IrClass, override val 
         bridgeCallBuilder.prepare += kotlinPointed
 
         val cPointer = passThroughBridge(irGet(kotlinPointed), kotlinPointedType, CTypes.pointer(cType))
-        cBridgeBodyLines += "*${cPointer.name} = $expression;"
+        // TODO: need to implement C++ return by value.
+        // It's not that easy as there's that typedef:
+        //
+        // typedef struct { int p0; struct { } p1; } _70726f6772616d_struct10;
+        // extern const _70726f6772616d_struct10 (*_70726f6772616d_target9)(void *) __asm("knifunptr_cppClass9_retByValue");
+        // void _70726f6772616d_knbridge8(void *p1, _70726f6772616d_struct10 *p2) {
+        //      *p2 = _70726f6772616d_target9(p1);
+        // }
+        // So implementing something like
+        //      new(p1) CppTest(retByValue((CppTest *)p0));
+        // needs some additional work, since this is not the original class.
 
-        buildKotlinBridgeCall {
+        //cBridgeBodyLines += "*${cPointer.name} = $expression;"
+
+        cBridgeBodyLines +="new(${cPointer.name}) ${cType.render("")}($expression);"
+
+            buildKotlinBridgeCall {
             irBlock {
                 at(it)
                 +it

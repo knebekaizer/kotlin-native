@@ -51,17 +51,22 @@ internal class CFunctionBuilder {
 
     fun getType(): CType = CTypes.function(returnType, parameters.map { it.type }, variadic)
 
-    fun buildSignature(name: String): String = returnType.render(buildString {
-        append(name)
-        append('(')
-        parameters.joinTo(this)
-        if (parameters.isEmpty()) {
-            if (!variadic) append("void")
-        } else {
-            if (variadic) append(", ...")
-        }
-        append(')')
-    })
+    fun buildSignature(name: String): String =
+    "extern \"C\" " +
+    returnType.render(buildString {
+            append(name)
+            append('(')
+            parameters.joinTo(this)
+            if (parameters.isEmpty()) {
+                if (!variadic) append("void")
+            } else {
+                if (variadic) append(", ...")
+            }
+            append(')')
+        }).also {
+        println("CFunctionBuilder buildSignature for $name:")
+        println("\t${it}")
+    }
 
 }
 
