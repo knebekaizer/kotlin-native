@@ -206,8 +206,14 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
         val definitionCursor = clang_getCursorDefinition(cursor)
         if (clang_Cursor_isNull(definitionCursor) == 0) {
             assert(clang_isCursorDefinition(definitionCursor) != 0)
-            createStructDef(decl, cursor)
+            // TODO: is this a bug or this is a wrong thing to do?
+            // Otherwise c++ class definition is created from its forward declaration
+            // and hence is empty.
+            //createStructDef(decl, cursor)
+            createStructDef(decl, definitionCursor)
         }
+    }.also {
+        println("GETORPUT getStructDeclAt ${cursor.spelling}")
     }
 
     private fun createStructDecl(cursor: CValue<CXCursor>): StructDeclImpl {
@@ -1037,16 +1043,29 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
         }
     }
 
+    private fun String.isUnknownTemplate() =
+            this.startsWith("sk_sp") &&
+            listOf("SkImage", "SkSurface", "SkData").none { this == "sk_sp<$it>" }
+
     private fun getFunction(cursor: CValue<CXCursor>, receiver: StructDecl? = null): FunctionDecl? {
         if (!isFuncDeclEligible(cursor)) {
             log("Skip function ${clang_getCursorSpelling(cursor).convertAndDispose()}")
             return null
         }
         var name = clang_getCursorSpelling(cursor).convertAndDispose()
-        var returnType = convertType(clang_getCursorResultType(cursor), clang_getCursorResultTypeAttributes(cursor))
+
+        println("GET FUNCTION: $name in ${receiver?.spelling}")
+
+        val cursorReturnType = clang_getCursorResultType(cursor)
+        val cursorReturnTypeSpelling = clang_getTypeSpelling(cursorReturnType).convertAndDispose()
+
+        if (cursorReturnTypeSpelling.isUnknownTemplate()) return null
+
+        var returnType = convertType(cursorReturnType, clang_getCursorResultTypeAttributes(cursor))
+        println("RESULT TYPE: ${clang_getTypeSpelling(cursorReturnType).convertAndDispose()}")
 
         val parameters = mutableListOf<Parameter>()
-        parameters += getFunctionParameters(cursor)
+        parameters += getFunctionParameters(cursor) ?: return null
 
         val binaryName = when (library.language) {
             Language.C, Language.CPP, Language.OBJECTIVE_C -> clang_Cursor_getMangling(cursor).convertAndDispose()
@@ -1107,7 +1126,7 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
 
         val encoding = clang_getDeclObjCTypeEncoding(cursor).convertAndDispose()
         val returnType = convertType(clang_getCursorResultType(cursor), clang_getCursorResultTypeAttributes(cursor))
-        val parameters = getFunctionParameters(cursor)
+        val parameters = getFunctionParameters(cursor)!!
 
         if (returnType == UnsupportedType || parameters.any { it.type == UnsupportedType }) {
             return null // TODO: make a more universal fix.
@@ -1146,20 +1165,28 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
         var ret = true
         visitChildren(cursor) { childCursor, _ ->
             when (childCursor.kind) {
-                CXCursorKind.CXCursor_TemplateRef -> {
-                    ret = false
-                    CXChildVisitResult.CXChildVisit_Break
-                }
+                CXCursorKind.CXCursor_TemplateRef ->
+                    // TODO: this should be managed by Skia plugin
+                    if (childCursor.spelling.startsWith("sk_sp")) {
+                        CXChildVisitResult.CXChildVisit_Recurse
+                    } else {
+                        ret = false
+                        CXChildVisitResult.CXChildVisit_Break
+                    }
                 else -> CXChildVisitResult.CXChildVisit_Recurse
             }
         }
         return ret
     }
 
-    private fun getFunctionParameters(cursor: CValue<CXCursor>): List<Parameter> {
+    private fun getFunctionParameters(cursor: CValue<CXCursor>): List<Parameter>? {
         val argNum = clang_Cursor_getNumArguments(cursor)
         val args = (0..argNum - 1).map {
             val argCursor = clang_Cursor_getArgument(cursor, it)
+            if (clang_getTypeSpelling(clang_getCursorType(argCursor)).convertAndDispose().isUnknownTemplate()) {
+                println("UNKNOWN TEMPLATE arg: ${clang_getTypeSpelling(clang_getCursorType(argCursor)).convertAndDispose()}")
+                return null
+            }
             val argName = getCursorSpelling(argCursor)
             val type = convertCursorType(argCursor)
             Parameter(argName, type,

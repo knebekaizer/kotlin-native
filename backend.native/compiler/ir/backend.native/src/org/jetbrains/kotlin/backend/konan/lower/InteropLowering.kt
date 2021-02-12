@@ -90,6 +90,9 @@ private abstract class BaseInteropIrTransformer(private val context: Context) : 
                 return (expression as? IrCall)?.symbol?.owner?.konanLibrary as? KonanLibrary
             }
 
+            override val language: String
+                get() = klib?.manifestProperties?.getProperty("language") ?: ""
+
             override fun addKotlin(declaration: IrDeclaration) {
                 addTopLevel(declaration)
             }

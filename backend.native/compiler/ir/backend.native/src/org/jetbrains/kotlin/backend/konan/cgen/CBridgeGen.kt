@@ -52,6 +52,7 @@ internal interface KotlinStubs {
     val symbols: KonanSymbols
     val target: KonanTarget
     val klib: KonanLibrary?
+    val language: String
     fun addKotlin(declaration: IrDeclaration)
     fun addC(lines: List<String>)
     fun getUniqueCName(prefix: String): String
@@ -179,7 +180,9 @@ internal fun KotlinStubs.generateCCall(expression: IrCall, builder: IrBuilderWit
         val returnType = expression.getTypeArgument(expression.typeArgumentsCount - 1)!!
         mapReturnType(returnType, expression, signature = null)
     } else {
-        mapReturnType(callee.returnType, expression, signature = callee)
+        mapReturnType(callee.returnType, expression, signature = callee,
+            skiaSharedPointer = expression.symbol.owner.hasCCallAnnotation("SkiaSharedPointerReturn")
+        )
     }
 
     val result = callBuilder.buildCall(targetFunctionName, returnValuePassing)
@@ -476,7 +479,8 @@ private fun CCallbackBuilder.build(function: IrSimpleFunction, signature: IrSimp
     val valueReturning = stubs.mapReturnType(
             signature.returnType,
             location = if (isObjCMethod) function else location,
-            signature = signature
+            signature = signature,
+            skiaSharedPointer = function.hasCCallAnnotation("SkiaSharedPointerReturn")
     )
     buildValueReturn(function, valueReturning)
     return buildCFunction()
@@ -502,7 +506,7 @@ private fun CCallbackBuilder.buildCFunction(): String {
 
     val cLines = mutableListOf<String>()
 
-    cLines += "${cFunctionBuilder.buildSignature(result)} {"
+    cLines += "${cFunctionBuilder.buildSignature(result, stubs.language)} {"
     cLines += cBodyLines
     cLines += "}"
 
@@ -613,6 +617,14 @@ private fun KotlinStubs.createFakeKotlinExternalFunction(
 private fun getCStructType(kotlinClass: IrClass): CType? =
         kotlinClass.getCStructSpelling()?.let { CTypes.simple(it) }
 
+// TODO: Skia plugin.
+private fun KotlinStubs.getNamedCSkiaSharedPointerToStructType(kotlinClass: IrClass): CType? {
+    val cStructType = kotlinClass.getCStructSpelling()?.let { CTypes.simple("sk_sp<$it>") } ?: return null
+    val name = getUniqueCName("struct")
+    addC(listOf("typedef ${cStructType.render(name)};"))
+    return CTypes.simple(name)
+}
+
 private fun KotlinStubs.getNamedCStructType(kotlinClass: IrClass): CType? {
     val cStructType = getCStructType(kotlinClass) ?: return null
     val name = getUniqueCName("struct")
@@ -659,19 +671,21 @@ private fun KotlinStubs.mapFunctionParameterType(
         type: IrType,
         retained: Boolean,
         variadic: Boolean,
-        location: IrElement
+        location: IrElement,
+        skiaSharedPointer: Boolean = false
 ): ArgumentPassing = when {
     type.isUnit() && !variadic -> IgnoredUnitArgumentPassing
-    else -> mapType(type, retained = retained, variadic = variadic, location = location)
+    else -> mapType(type, retained = retained, variadic = variadic, location = location, skiaSharedPointer = skiaSharedPointer)
 }
 
 private fun KotlinStubs.mapReturnType(
         type: IrType,
         location: IrElement,
-        signature: IrSimpleFunction?
+        signature: IrSimpleFunction?,
+        skiaSharedPointer: Boolean = false
 ): ValueReturning = when {
     type.isUnit() -> VoidReturning
-    else -> mapType(type, retained = signature?.objCReturnsRetained() ?: false, variadic = false, location = location)
+    else -> mapType(type, retained = signature?.objCReturnsRetained() ?: false, variadic = false, location = location, skiaSharedPointer = skiaSharedPointer)
 }
 
 private fun KotlinStubs.mapBlockType(
@@ -711,7 +725,8 @@ private fun KotlinStubs.mapType(
         type: IrType,
         retained: Boolean,
         variadic: Boolean,
-        location: IrElement
+        location: IrElement,
+        skiaSharedPointer: Boolean = false
 ): ValuePassing = when {
     type.isBoolean() -> {
         val cBoolType = cBoolType(target)
@@ -725,7 +740,18 @@ private fun KotlinStubs.mapType(
     type.isLong() -> TrivialValuePassing(irBuiltIns.longType, CTypes.longLong)
     type.isFloat() -> TrivialValuePassing(irBuiltIns.floatType, CTypes.float)
     type.isDouble() -> TrivialValuePassing(irBuiltIns.doubleType, CTypes.double)
-    type.isCPointer(symbols) -> TrivialValuePassing(type, CTypes.voidPtr)
+    type.isCPointer(symbols) -> if (skiaSharedPointer) {
+        // TODO: what to do with nulls?
+        //require(!type.isNullable()) { renderCompilerError(location) }
+        val kotlinClass = (type as IrSimpleType).arguments.singleOrNull()?.typeOrNull?.getClass()
+        require(kotlinClass != null) { renderCompilerError(location) }
+        val cStructType = getNamedCSkiaSharedPointerToStructType(kotlinClass)
+        require(cStructType != null) { renderCompilerError(location) }
+
+        SkiaSharedPointerPassing(type, kotlinClass, cStructType)
+    } else {
+        TrivialValuePassing(type, CTypes.voidPtr)
+    }
     type.isTypeOfNullLiteral() && variadic  -> TrivialValuePassing(symbols.interopCPointer.typeWithStarProjections.makeNullable(), CTypes.voidPtr)
     type.isUByte() -> UnsignedValuePassing(type, CTypes.signedChar, CTypes.unsignedChar)
     type.isUShort() -> UnsignedValuePassing(type, CTypes.short, CTypes.unsignedShort)
@@ -839,7 +865,7 @@ private abstract class SimpleValuePassing : ValuePassing {
     }
 }
 
-private class TrivialValuePassing(val kotlinType: IrType, override val cType: CType) : SimpleValuePassing() {
+private open class TrivialValuePassing(val kotlinType: IrType, override val cType: CType) : SimpleValuePassing() {
     override val kotlinBridgeType: IrType
         get() = kotlinType
     override val cBridgeType: CType
@@ -978,6 +1004,83 @@ private class StructValuePassing(private val kotlinClass: IrClass, override val 
             )
 
 }
+
+private class SkiaSharedPointerPassing(
+    private val type: IrType,
+    private val kotlinClass: IrClass,
+    override val cType: CType
+) : TrivialValuePassing(type, cType) {
+    /*
+    override fun KotlinToCCallBuilder.passValue(expression: IrExpression): CExpression {
+        val cBridgeValue = passThroughBridge(
+            cValuesRefToPointer(expression),
+            symbols.interopCPointer.typeWithStarProjections,
+            CTypes.pointer(cType)
+        ).name
+
+        return CExpression("*$cBridgeValue", cType)
+    }
+*/
+    override val cBridgeType: CType
+        get() = CTypes.voidPtr
+
+    override fun KotlinToCCallBuilder.returnValue(expression: String): IrExpression = with(irBuilder) {
+        cFunctionBuilder.setReturnType(cType)
+        bridgeBuilder.setReturnType(kotlinBridgeType, cBridgeType)
+        // Skija bindings go like
+        //     sk_sp<SkSurface> surface = SkSurface::MakeRasterN32Premul(
+        //        width, height,
+        //        /* const SkSurfaceProps* */ nullptr
+        //    );
+        //    return reinterpret_cast<jlong>(surface.release());
+        val skiaPointer = cType.render("")
+        cBridgeBodyLines += "$skiaPointer value = $expression;"
+        cBridgeBodyLines.add("return reinterpret_cast</*${cType.render("")}*/void *>(value.release());")
+        val kotlinBridgeCall = buildKotlinBridgeCall()
+        return irBuilder.bridgedToKotlin(kotlinBridgeCall, symbols)
+    }
+/*
+    override fun CCallbackBuilder.receiveValue(): IrExpression = with(bridgeBuilder.kotlinIrBuilder) {
+        val cParameter = cFunctionBuilder.addParameter(cType)
+        val kotlinPointed = passThroughBridge("&${cParameter.name}", CTypes.voidPtr, kotlinPointedType)
+
+        readCValue(irGet(kotlinPointed), symbols)
+    }
+
+    private fun IrBuilderWithScope.readCValue(kotlinPointed: IrExpression, symbols: KonanSymbols): IrExpression =
+        irCall(symbols.interopCValueRead.owner).apply {
+            extensionReceiver = kotlinPointed
+            putValueArgument(0, getTypeObject())
+        }
+
+    override fun CCallbackBuilder.returnValue(expression: IrExpression) = with(bridgeBuilder.kotlinIrBuilder) {
+        bridgeBuilder.setReturnType(irBuiltIns.unitType, CTypes.void)
+        cFunctionBuilder.setReturnType(cType)
+
+        val result = "callbackResult"
+        val cReturnValue = CVariable(cType, result)
+        cBodyLines += "$cReturnValue;"
+        val kotlinPtr = passThroughBridge("&$result", CTypes.voidPtr, symbols.nativePtrType)
+
+        kotlinBridgeStatements += irCall(symbols.interopCValueWrite.owner).apply {
+            extensionReceiver = expression
+            putValueArgument(0, irGet(kotlinPtr))
+        }
+        val cBridgeCall = buildCBridgeCall()
+        cBodyLines += "$cBridgeCall;"
+        cBodyLines += "return $result;"
+    }
+
+    private val kotlinPointedType: IrType get() = kotlinClass.defaultType
+
+    private fun IrBuilderWithScope.getTypeObject() =
+        irGetObject(
+            kotlinClass.declarations.filterIsInstance<IrClass>()
+                .single { it.isCompanion }.symbol
+        )
+*/
+}
+
 
 private class CEnumValuePassing(
         val enumClass: IrClass,
@@ -1302,7 +1405,7 @@ private class ObjCBlockPointerValuePassing(
 
         val block = buildString {
             append('^')
-            append(callbackBuilder.cFunctionBuilder.buildSignature(""))
+            append(callbackBuilder.cFunctionBuilder.buildSignature("", stubs.language))
             append(" { ")
             callbackBuilder.cBodyLines.forEach {
                 append(it)

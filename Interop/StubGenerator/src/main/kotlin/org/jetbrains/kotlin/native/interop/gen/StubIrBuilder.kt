@@ -264,6 +264,13 @@ class StubsBuildingContextImpl(
         val classifier = declarationMapper.getKotlinClassForPointed(structDecl)
         return classifier
     }
+
+    // TODO: what should we do to be able to be able to get Foo from sk_sp<Foo>?
+    fun tryFindingStructByName(name: String): StructDecl {
+        return nativeIndex.structs.singleOrNull {
+            it.spelling == name && it.def != null
+        } ?: error("Finding template arg struct by name has found multiple candidates")
+    }
 }
 
 data class StubIrBuilderResult(

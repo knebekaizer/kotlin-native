@@ -51,6 +51,10 @@ public annotation class CCall(val id: String) {
     @Target(AnnotationTarget.VALUE_PARAMETER)
     @Retention(AnnotationRetention.BINARY)
     annotation class Consumed
+
+    @Target(AnnotationTarget.FUNCTION)
+    @Retention(AnnotationRetention.BINARY)
+    annotation class SkiaSharedPointerReturn
 }
 
 /**

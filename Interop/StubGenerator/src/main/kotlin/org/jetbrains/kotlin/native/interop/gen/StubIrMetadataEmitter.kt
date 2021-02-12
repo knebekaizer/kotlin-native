@@ -417,6 +417,7 @@ private class MappingExtensions(
             is AnnotationStub.CCall.Symbol -> mapOfNotNull(
                     ("id" to symbolName).asAnnotationArgument()
             )
+            is AnnotationStub.CCall.SkiaSharedPointerReturn -> emptyMap()
             is AnnotationStub.CStruct -> mapOfNotNull(
                     ("spelling" to struct).asAnnotationArgument()
             )

@@ -83,6 +83,9 @@ internal class StructStubBuilder(
         var methods: List<FunctionStub> =
             def.methods
                     .filter { it.isCxxInstanceMethod }
+                    // TODO: this excludes all similar named methods from all calsses.
+                    // Consider using fqnames or something.
+                    .filterNot { it.name in context.configuration.excludedFunctions }
                     .map { func ->
                         try {
                             (FunctionStubBuilder(context, func).build().map { it as FunctionStub }).single()
@@ -545,11 +548,27 @@ internal class FunctionStubBuilder(
             }
         }
 
-        val returnType = if (func.returnsVoid()) {
-            KotlinTypes.unit
-        } else {
-            context.mirror(func.returnType).argType
+        // TODO: generalize and move out to a plugin.
+        fun Type.isKnownTemplateType() = this is RecordType && this.decl.spelling.startsWith("sk_sp<")
+        fun Type.retTypeForKnownTemplateType(): StructDecl {
+            assert(this.isKnownTemplateType()) {
+                "Expected a known template type"
+            }
+            require(this is RecordType)
+            val structName = this.decl.spelling.drop(6).dropLast(1)
+            return (context as StubsBuildingContextImpl).tryFindingStructByName(structName)
+        }
+
+        val returnType = when {
+            func.returnsVoid() -> KotlinTypes.unit
+            func.returnType.isKnownTemplateType() -> {
+                println("SUBSTITUTING to ${context.mirror(PointerType(RecordType(func.returnType.retTypeForKnownTemplateType()))).argType}")
+                context.mirror(PointerType(RecordType(func.returnType.retTypeForKnownTemplateType()))).argType
+                //context.mirror(ManagedType(func.returnType.retTypeForKnownTemplateType())).argType
+            }
+            else -> context.mirror(func.returnType).argType
         }.toStubIrType()
+
 
         if (skipOverloads && context.isOverloading(func))
             return emptyList()
@@ -564,7 +583,12 @@ internal class FunctionStubBuilder(
                 val type = KotlinTypes.any.makeNullable().toStubIrType()
                 parameters += FunctionParameterStub("variadicArguments", type, isVararg = true)
             }
-            annotations = listOf(AnnotationStub.CCall.Symbol("${context.generateNextUniqueId("knifunptr_")}_${func.name}"))
+            annotations = listOf(
+                AnnotationStub.CCall.SkiaSharedPointerReturn.takeIf {
+                    func.returnType.let { it is RecordType && it.decl.spelling.startsWith("sk_sp<")}
+                },
+                AnnotationStub.CCall.Symbol("${context.generateNextUniqueId("knifunptr_")}_${func.name}")
+            ).filterNotNull()
             mustBeExternal = true
         }
         val functionStub = FunctionStub(

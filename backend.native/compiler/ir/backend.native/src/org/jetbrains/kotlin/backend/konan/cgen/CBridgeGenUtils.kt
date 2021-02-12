@@ -22,7 +22,7 @@ import org.jetbrains.kotlin.ir.symbols.impl.IrSimpleFunctionSymbolImpl
 import org.jetbrains.kotlin.ir.symbols.impl.IrValueParameterSymbolImpl
 import org.jetbrains.kotlin.ir.types.IrType
 import org.jetbrains.kotlin.ir.types.impl.IrUninitializedType
-import org.jetbrains.kotlin.ir.util.constructors
+import org.jetbrains.kotlin.ir.util.*
 import org.jetbrains.kotlin.ir.util.irBuilder
 import org.jetbrains.kotlin.ir.util.irCatch
 import org.jetbrains.kotlin.konan.ForeignExceptionMode
@@ -51,9 +51,9 @@ internal class CFunctionBuilder {
 
     fun getType(): CType = CTypes.function(returnType, parameters.map { it.type }, variadic)
 
-    fun buildSignature(name: String): String =
-    "extern \"C\" " +
-    returnType.render(buildString {
+    fun buildSignature(name: String, language: String): String =
+        (if (language == "C++") "extern \"C\" " else "") +
+        returnType.render(buildString {
             append(name)
             append('(')
             parameters.joinTo(this)
@@ -150,7 +150,7 @@ internal class KotlinCBridgeBuilder(
         startOffset: Int,
         endOffset: Int,
         cName: String,
-        stubs: KotlinStubs,
+        val stubs: KotlinStubs,
         isKotlinToC: Boolean,
         foreignExceptionMode: ForeignExceptionMode.Mode = ForeignExceptionMode.default
 ) {
@@ -168,7 +168,7 @@ internal class KotlinCBridgeBuilder(
         cBridgeBuilder.setReturnType(cReturnType)
     }
 
-    fun buildCSignature(name: String): String = cBridgeBuilder.buildSignature(name)
+    fun buildCSignature(name: String): String = cBridgeBuilder.buildSignature(name, stubs.language)
 
     fun buildKotlinBridge() = kotlinBridgeBuilder.build()
 }
