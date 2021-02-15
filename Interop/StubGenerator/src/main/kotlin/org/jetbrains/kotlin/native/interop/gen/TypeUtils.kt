@@ -24,6 +24,15 @@ val EnumDef.isAnonymous: Boolean
 val StructDecl.isAnonymous: Boolean
     get() = spelling.contains("(anonymous ") // TODO: it is a hack
 
+// TODO: This should be managed by Skia plugin.
+val StructDecl.isSkiaSharedPointer: Boolean
+    get() = spelling.startsWith("sk_sp<") && spelling.endsWith(">")
+
+// TODO: This should be managed by Skia plugin
+val StructDecl.stripSkiaSharedPointer: String
+    get() = this.spelling.drop(6).dropLast(1)
+
+
 /**
  * Returns the expression which could be used for this type in C code.
  * Note: the resulting string doesn't exactly represent this type, but it is enough for current purposes.

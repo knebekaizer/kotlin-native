@@ -1043,9 +1043,14 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
         }
     }
 
+    // TODO: This should be managed by Skia plugin.
+    private val wellKnownSkiaStructs: List<String>
+            = listOf("SkImage", "SkSurface", "SkData")
+
+    // TODO: This should be managed by Skia plugin.
     private fun String.isUnknownTemplate() =
             this.startsWith("sk_sp") &&
-            listOf("SkImage", "SkSurface", "SkData").none { this == "sk_sp<$it>" }
+            wellKnownSkiaStructs.none { this == "sk_sp<$it>" }
 
     private fun getFunction(cursor: CValue<CXCursor>, receiver: StructDecl? = null): FunctionDecl? {
         if (!isFuncDeclEligible(cursor)) {

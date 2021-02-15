@@ -17,16 +17,16 @@ fun example(canvas: SkCanvas) {
 
 fun raster(width: Int, height: Int, path: String) {
 
-        val rasterSurface: SkSurface = SkSurface.MakeRasterN32Premul(width, height, null)?.pointed 
+        val rasterSurface: SkSurface = SkSurface.MakeRasterN32Premul(width, height, null)
             ?: error("No surface")
         val rasterCanvas: SkCanvas = rasterSurface.getCanvas()?.pointed 
             ?: error("Could not get canvas")
 
         example(rasterCanvas)
 
-        val img = rasterSurface.makeImageSnapshot()?.pointed 
+        val img = rasterSurface.makeImageSnapshot()
             ?: error("no snapshot")
-        val png = img.encodeToData()?.pointed 
+        val png = img.encodeToData()
             ?: error("no data")
 
         memScoped {

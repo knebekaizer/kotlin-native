@@ -549,22 +549,23 @@ internal class FunctionStubBuilder(
         }
 
         // TODO: generalize and move out to a plugin.
-        fun Type.isKnownTemplateType() = this is RecordType && this.decl.spelling.startsWith("sk_sp<")
-        fun Type.retTypeForKnownTemplateType(): StructDecl {
-            assert(this.isKnownTemplateType()) {
+        fun Type.isKnownSkiaTemplateType() = this is RecordType && this.decl.isSkiaSharedPointer
+        fun Type.retTypeForKnownSkiaTemplateType(): StructDecl {
+            assert(this.isKnownSkiaTemplateType()) {
                 "Expected a known template type"
             }
             require(this is RecordType)
-            val structName = this.decl.spelling.drop(6).dropLast(1)
+            val structName = this.decl.stripSkiaSharedPointer
             return (context as StubsBuildingContextImpl).tryFindingStructByName(structName)
         }
 
         val returnType = when {
             func.returnsVoid() -> KotlinTypes.unit
-            func.returnType.isKnownTemplateType() -> {
-                println("SUBSTITUTING to ${context.mirror(PointerType(RecordType(func.returnType.retTypeForKnownTemplateType()))).argType}")
-                context.mirror(PointerType(RecordType(func.returnType.retTypeForKnownTemplateType()))).argType
-                //context.mirror(ManagedType(func.returnType.retTypeForKnownTemplateType())).argType
+            func.returnType.isKnownSkiaTemplateType() -> {
+                //println("SUBSTITUTING to ${context.mirror(PointerType(RecordType(func.returnType.retTypeForKnownSkiaTemplateType()))).argType}")
+                //context.mirror(PointerType(RecordType(func.returnType.retTypeForKnownSkiaTemplateType()))).argType
+                println("SUBSTITUTING to ${context.mirror(ManagedType(func.returnType.retTypeForKnownSkiaTemplateType())).argType}")
+                context.mirror(ManagedType(func.returnType.retTypeForKnownSkiaTemplateType())).argType
             }
             else -> context.mirror(func.returnType).argType
         }.toStubIrType()
@@ -584,8 +585,9 @@ internal class FunctionStubBuilder(
                 parameters += FunctionParameterStub("variadicArguments", type, isVararg = true)
             }
             annotations = listOf(
+                // TODO: this should ne managed by Skia plugin
                 AnnotationStub.CCall.SkiaSharedPointerReturn.takeIf {
-                    func.returnType.let { it is RecordType && it.decl.spelling.startsWith("sk_sp<")}
+                    func.returnType.let { it is RecordType && it.decl.isSkiaSharedPointer}
                 },
                 AnnotationStub.CCall.Symbol("${context.generateNextUniqueId("knifunptr_")}_${func.name}")
             ).filterNotNull()

@@ -878,6 +878,10 @@ private class InteropTransformer(val context: Context, override val irFile: IrFi
             println("\t${expression.render()}")
             println("GENERATING STUBS AND CALL")
             return generateWithStubs(expression) { generateCCall(expression, builder, isInvoke = false, exceptionMode) }
+                .also {
+                    println("GENERATED KOTLIN")
+                    println(it.render())
+                }
         }
 
         val failCompilation = { msg: String -> error(irFile, expression, msg) }

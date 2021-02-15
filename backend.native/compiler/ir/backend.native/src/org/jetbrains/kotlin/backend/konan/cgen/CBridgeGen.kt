@@ -740,7 +740,7 @@ private fun KotlinStubs.mapType(
     type.isLong() -> TrivialValuePassing(irBuiltIns.longType, CTypes.longLong)
     type.isFloat() -> TrivialValuePassing(irBuiltIns.floatType, CTypes.float)
     type.isDouble() -> TrivialValuePassing(irBuiltIns.doubleType, CTypes.double)
-    type.isCPointer(symbols) -> if (skiaSharedPointer) {
+    type.isCPointer(symbols) -> /*if (skiaSharedPointer) {
         // TODO: what to do with nulls?
         //require(!type.isNullable()) { renderCompilerError(location) }
         val kotlinClass = (type as IrSimpleType).arguments.singleOrNull()?.typeOrNull?.getClass()
@@ -750,8 +750,9 @@ private fun KotlinStubs.mapType(
 
         SkiaSharedPointerPassing(type, kotlinClass, cStructType)
     } else {
+    */
         TrivialValuePassing(type, CTypes.voidPtr)
-    }
+    //}
     type.isTypeOfNullLiteral() && variadic  -> TrivialValuePassing(symbols.interopCPointer.typeWithStarProjections.makeNullable(), CTypes.voidPtr)
     type.isUByte() -> UnsignedValuePassing(type, CTypes.signedChar, CTypes.unsignedChar)
     type.isUShort() -> UnsignedValuePassing(type, CTypes.short, CTypes.unsignedShort)
@@ -783,7 +784,16 @@ private fun KotlinStubs.mapType(
         StructValuePassing(kotlinClass, cStructType)
     }
 
-    type.classOrNull?.isSubtypeOfClass(symbols.nativePointed) == true -> {
+    type.classOrNull?.isSubtypeOfClass(symbols.nativePointed) == true -> if (skiaSharedPointer) {
+        // TODO: what to do with nulls?
+        //require(!type.isNullable()) { renderCompilerError(location) }
+        val kotlinClass = type.getClass()
+        require(kotlinClass != null) { renderCompilerError(location) }
+        val cStructType = getNamedCSkiaSharedPointerToStructType(kotlinClass)
+        require(cStructType != null) { renderCompilerError(location) }
+
+        SkiaSharedPointerPassing(symbols, type, kotlinClass, cStructType)
+    } else {
         TrivialValuePassing(type, CTypes.voidPtr)
     }
 
@@ -1006,6 +1016,7 @@ private class StructValuePassing(private val kotlinClass: IrClass, override val 
 }
 
 private class SkiaSharedPointerPassing(
+    private val symbols: KonanSymbols,
     private val type: IrType,
     private val kotlinClass: IrClass,
     override val cType: CType
@@ -1021,6 +1032,10 @@ private class SkiaSharedPointerPassing(
         return CExpression("*$cBridgeValue", cType)
     }
 */
+    override val kotlinBridgeType: IrType
+        get() = symbols.nativePtrType
+        // get() = symbols.nonNullNativePtrType // TODO: this is wrong. Figure out what to do with nulls here.
+
     override val cBridgeType: CType
         get() = CTypes.voidPtr
 
@@ -1039,6 +1054,15 @@ private class SkiaSharedPointerPassing(
         val kotlinBridgeCall = buildKotlinBridgeCall()
         return irBuilder.bridgedToKotlin(kotlinBridgeCall, symbols)
     }
+
+    override fun IrBuilderWithScope.bridgedToKotlin(expression: IrExpression, symbols: KonanSymbols): IrExpression {
+        val structConstructor: IrConstructor = type.getClass()!!.primaryConstructor!!
+        return irCall(structConstructor.symbol).apply {
+            //dispatchReceiver = irGetObject(companionClass.symbol)
+            putValueArgument(0, expression)
+        }
+    }
+
 /*
     override fun CCallbackBuilder.receiveValue(): IrExpression = with(bridgeBuilder.kotlinIrBuilder) {
         val cParameter = cFunctionBuilder.addParameter(cType)

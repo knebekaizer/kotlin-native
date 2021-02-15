@@ -325,6 +325,8 @@ object VoidType : Type
 
 data class RecordType(val decl: StructDecl) : Type
 
+data class ManagedType(val decl: StructDecl) : Type
+
 data class EnumType(val def: EnumDef) : Type
 
 // when pointer type is provided by clang we'll use ots correct spelling
