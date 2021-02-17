@@ -406,7 +406,7 @@ private fun byRefTypeMirror(pointedType: KotlinClassifierType) : TypeMirror.ByRe
 // This is for C++ Skia plugin.
 private fun managedTypeMirror(pointedType: KotlinClassifierType) : TypeMirror.ByValue {
     val info = TypeInfo.ByRef(pointedType) // There are all error() anyways.
-    return TypeMirror.ByValue(pointedType, info, pointedType) // 1 vs 3?
+    return TypeMirror.ByValue(pointedType, info, pointedType, nullable = true) // 1 vs 3?
 }
 
 fun mirror(declarationMapper: DeclarationMapper, type: Type): TypeMirror = when (type) {
@@ -416,7 +416,7 @@ fun mirror(declarationMapper: DeclarationMapper, type: Type): TypeMirror = when 
 
     is ManagedType -> {
         println("MIRRORING $type")
-        managedTypeMirror(declarationMapper.getKotlinClassForPointed(type.decl).type).also {
+        managedTypeMirror(declarationMapper.getKotlinClassForPointed(type.decl).type/*.makeNullableAsSpecified(true)*/).also {
             println("MIRRORED: $it")
         }
     }

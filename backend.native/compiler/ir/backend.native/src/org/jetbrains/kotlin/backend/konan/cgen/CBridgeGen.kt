@@ -1021,7 +1021,13 @@ private class SkiaSharedPointerPassing(
     private val kotlinClass: IrClass,
     override val cType: CType
 ) : TrivialValuePassing(type, cType) {
-    /*
+
+    override val kotlinBridgeType: IrType
+        get() = symbols.nativePtrType
+
+    override val cBridgeType: CType
+        get() = CTypes.voidPtr
+
     override fun KotlinToCCallBuilder.passValue(expression: IrExpression): CExpression {
         val cBridgeValue = passThroughBridge(
             cValuesRefToPointer(expression),
@@ -1029,15 +1035,8 @@ private class SkiaSharedPointerPassing(
             CTypes.pointer(cType)
         ).name
 
-        return CExpression("*$cBridgeValue", cType)
+        return CExpression(cBridgeValue, cType)
     }
-*/
-    override val kotlinBridgeType: IrType
-        get() = symbols.nativePtrType
-        // get() = symbols.nonNullNativePtrType // TODO: this is wrong. Figure out what to do with nulls here.
-
-    override val cBridgeType: CType
-        get() = CTypes.voidPtr
 
     override fun KotlinToCCallBuilder.returnValue(expression: String): IrExpression = with(irBuilder) {
         cFunctionBuilder.setReturnType(cType)
@@ -1050,16 +1049,27 @@ private class SkiaSharedPointerPassing(
         //    return reinterpret_cast<jlong>(surface.release());
         val skiaPointer = cType.render("")
         cBridgeBodyLines += "$skiaPointer value = $expression;"
-        cBridgeBodyLines.add("return reinterpret_cast</*${cType.render("")}*/void *>(value.release());")
+        cBridgeBodyLines.add("return reinterpret_cast<void *>(value.release());")
         val kotlinBridgeCall = buildKotlinBridgeCall()
         return irBuilder.bridgedToKotlin(kotlinBridgeCall, symbols)
     }
 
     override fun IrBuilderWithScope.bridgedToKotlin(expression: IrExpression, symbols: KonanSymbols): IrExpression {
         val structConstructor: IrConstructor = type.getClass()!!.primaryConstructor!!
-        return irCall(structConstructor.symbol).apply {
-            //dispatchReceiver = irGetObject(companionClass.symbol)
-            putValueArgument(0, expression)
+        return irLetS(expression) { blockPointerVarSymbol ->
+            val blockPointerVar = blockPointerVarSymbol.owner
+            irIfThenElse(
+                type.makeNullable(),
+                condition = irCall(symbols.areEqualByValue.getValue(PrimitiveBinaryType.POINTER).owner).apply {
+                    putValueArgument(0, irGet(blockPointerVar))
+                    putValueArgument(1, irNullNativePtr(symbols))
+                },
+                thenPart = irNull(),
+                elsePart = irCall(structConstructor.symbol).apply {
+                    //    //dispatchReceiver = irGetObject(companionClass.symbol)
+                        putValueArgument(0, irGet(blockPointerVar))
+                }
+            )
         }
     }
 
