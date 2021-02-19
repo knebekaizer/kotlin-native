@@ -106,6 +106,7 @@ internal class ModuleMetadataEmitter(
     private val visitor = object : StubIrVisitor<VisitingContext, Any?> {
 
         override fun visitClass(element: ClassStub, data: VisitingContext): List<KmClass> {
+            println("CLASS ${element.classifier.fqName}")
             val classVisitingContext = VisitingContext(
                     container = element,
                     typeParametersInterner = Interner(data.typeParametersInterner),
@@ -155,6 +156,7 @@ internal class ModuleMetadataEmitter(
                                 annotations = listOf(AnnotationStub.Deprecated.unableToImport)
                         )
                     }
+                    println("METADATA: visit ${element.name}")
                     KmFunction(function.flags, function.qualifiedName()).also { km ->
                         km.receiverParameterType = function.receiver?.type?.map()
                         function.typeParameters.mapTo(km.typeParameters) { it.map() }
@@ -206,6 +208,9 @@ internal class ModuleMetadataEmitter(
                         constructorStub.parameters.mapTo(valueParameters, { it.map() })
                         constructorStub.annotations.mapTo(annotations, { it.map() })
                     }
+                }.also {
+                    val func = (constructorStub.origin as? StubOrigin.Function)?.function
+                    println("CONSTRUCTOR for ${if (constructorStub.isPrimary) "primary" else ""} ${func} ${func?.parentName} is $constructorStub")
                 }
 
         override fun visitPropertyAccessor(propertyAccessor: PropertyAccessor, data: VisitingContext) {
@@ -418,6 +423,7 @@ private class MappingExtensions(
                     ("id" to symbolName).asAnnotationArgument()
             )
             is AnnotationStub.CCall.SkiaSharedPointerReturn -> emptyMap()
+            is AnnotationStub.CCall.SkiaClassConstructor -> emptyMap()
             is AnnotationStub.CStruct -> mapOfNotNull(
                     ("spelling" to struct).asAnnotationArgument()
             )

@@ -487,6 +487,8 @@ class StubIrTextEmitter(
             "@CCall(${annotationStub.symbolName.quoteAsKotlinLiteral()})"
         AnnotationStub.CCall.SkiaSharedPointerReturn ->
             "@CCall.SkiaSharedPointerReturn"
+        AnnotationStub.CCall.SkiaClassConstructor ->
+            "@CCall.SkiaClassConstructor"
         is AnnotationStub.CStruct ->
             "@CStruct(${annotationStub.struct.quoteAsKotlinLiteral()})"
         is AnnotationStub.CNaturalStruct ->

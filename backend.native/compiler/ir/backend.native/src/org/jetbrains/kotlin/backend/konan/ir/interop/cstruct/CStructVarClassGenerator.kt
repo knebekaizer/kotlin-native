@@ -4,12 +4,17 @@
  */
 package org.jetbrains.kotlin.backend.konan.ir.interop.cstruct
 
+import kotlinx.cinterop.interpretCPointer
+import kotlinx.cinterop.ptr
 import org.jetbrains.kotlin.backend.konan.InteropBuiltIns
+import org.jetbrains.kotlin.backend.konan.ir.KonanSymbols
 import org.jetbrains.kotlin.backend.konan.ir.interop.DescriptorToIrTranslationMixin
 import org.jetbrains.kotlin.backend.konan.ir.interop.irInstanceInitializer
 import org.jetbrains.kotlin.descriptors.*
 import org.jetbrains.kotlin.ir.builders.irBlockBody
+import org.jetbrains.kotlin.ir.builders.irCall
 import org.jetbrains.kotlin.ir.builders.irGet
+import org.jetbrains.kotlin.ir.builders.irGetObject
 import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.descriptors.IrBuiltIns
 import org.jetbrains.kotlin.ir.expressions.impl.IrDelegatingConstructorCallImpl
@@ -19,7 +24,8 @@ import org.jetbrains.kotlin.psi2ir.generators.GeneratorContext
 internal class CStructVarClassGenerator(
         context: GeneratorContext,
         private val interopBuiltIns: InteropBuiltIns,
-        private val companionGenerator: CStructVarCompanionGenerator
+        private val companionGenerator: CStructVarCompanionGenerator,
+        private val konanSymbols: KonanSymbols
 ) : DescriptorToIrTranslationMixin {
 
     override val irBuiltIns: IrBuiltIns = context.irBuiltIns
@@ -43,6 +49,12 @@ internal class CStructVarClassGenerator(
             createClass(descriptor) { irClass ->
                 irClass.addMember(createPrimaryConstructor(irClass))
                 irClass.addMember(companionGenerator.generate(descriptor))
+                descriptor.constructors
+                    .filterNot { it.isPrimary }
+                    .map {
+                        val constructor = createSecondaryConstructor(irClass, it)
+                        irClass.addMember(constructor)
+                    }
                 descriptor.unsubstitutedMemberScope
                     .getContributedDescriptors()
                     .filterIsInstance<CallableMemberDescriptor>()
@@ -75,5 +87,64 @@ internal class CStructVarClassGenerator(
                 }
             }
         }
+    }
+
+    private fun createSecondaryConstructor(irClass: IrClass, descriptor: ClassConstructorDescriptor): IrConstructor {
+        val primaryConstructor = irClass.primaryConstructor!!.symbol
+
+        val alloc = konanSymbols.interopAllocType
+
+        val nativeheap = symbolTable.referenceClass(
+            interopBuiltIns.nativeHeap
+        )
+
+        val interopGetPtr = symbolTable.referenceSimpleFunction(
+            interopBuiltIns.interopGetPtr
+        )
+
+        val irConstructor = createConstructor(descriptor)
+
+        val correspondingInit = irClass.companionObject()!!
+            .declarations
+            .filterIsInstance<IrSimpleFunction>()
+            .filter { it.name.toString() == "__init__"}
+            .filter { it.valueParameters.size == irConstructor.valueParameters.size + 1}
+            .single {
+                it.valueParameters.drop(1).mapIndexed() { index, initParameter ->
+                    initParameter.type == irConstructor.valueParameters[index].type
+                }.all{ it }
+            }
+
+        postLinkageSteps.add {
+            irConstructor.body = irBuilder(irBuiltIns, irConstructor.symbol, SYNTHETIC_OFFSET, SYNTHETIC_OFFSET).irBlockBody {
+                +IrDelegatingConstructorCallImpl.fromSymbolOwner(
+                    startOffset, endOffset,
+                    context.irBuiltIns.unitType, primaryConstructor
+                ).also {
+                    val nativePointed = irCall(alloc).apply {
+                        extensionReceiver = irGetObject(nativeheap)
+                        putValueArgument(0, irGetObject(irClass.companionObject()!!.symbol))
+                    }
+                    val nativePtr = irCall(konanSymbols.interopNativePointedGetRawPointer).apply {
+                        extensionReceiver = nativePointed
+                    }
+                    it.putValueArgument(0, nativePtr)
+                }
+
+                +irCall(correspondingInit.symbol).apply {
+                    dispatchReceiver = irGetObject(irClass.companionObject()!!.symbol)
+                    putValueArgument(0,
+                        irCall(interopGetPtr).apply {
+                            extensionReceiver = irGet(irClass.thisReceiver!!)
+                        }
+                    )
+                    irConstructor.valueParameters.forEachIndexed { index, it ->
+                        putValueArgument(index+1, irGet(it))
+                    }
+                }
+            }
+        }
+        println("\t${irConstructor.render()}")
+        return irConstructor
     }
 }

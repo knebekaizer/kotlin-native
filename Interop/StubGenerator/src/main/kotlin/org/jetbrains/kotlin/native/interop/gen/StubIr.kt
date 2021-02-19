@@ -199,6 +199,7 @@ sealed class AnnotationStub(val classifier: Classifier) {
         class Symbol(val symbolName: String) : CCall(cCallClassifier)
         // TODO: this needs to go to the plugin somehow.
         object SkiaSharedPointerReturn : CCall(cCallClassifier.nested("SkiaSharedPointerReturn"))
+        object SkiaClassConstructor : CCall(cCallClassifier.nested("SkiaClassConstructor"))
     }
 
     class CStruct(val struct: String) : AnnotationStub(cStructClassifier) {

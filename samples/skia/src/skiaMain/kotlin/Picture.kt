@@ -2,19 +2,21 @@ import skia.sample.*
 import kotlinx.cinterop.*
 
 fun example(canvas: SkCanvas) {
-    // TODO: need convenient constructors for managed classes
-    val paint = nativeHeap.alloc<SkPaint>()
 
-    canvas.clear(SK_ColorBLACK);
+    val paint: SkPaint = SkPaint()
+    paint.setColor(SK_ColorGREEN)
+
+    canvas.clear(SK_ColorRED);
 
     for (i in 0..200) {
         for (j in 0..i) {
+            // TODO: get rid of `.pointed` dereference
             canvas.drawPoint(i.toFloat(), j.toFloat(), paint.ptr);
         }
     }
 
     // TODO: need memory management.
-    nativeHeap.free(paint)
+    // nativeHeap.free(paint)
 }
 
 fun raster(width: Int, height: Int, path: String) {
@@ -33,14 +35,9 @@ fun raster(width: Int, height: Int, path: String) {
         val png = img.encodeToData()
             ?: error("no data")
 
-        // TODO: get rid of memScoped
-        memScoped {
-            val out: SkFILEWStream = alloc<SkFILEWStream>() {
-                // TODO: make convenient constructors
-                SkFILEWStream.__init__(ptr, path.cstr)
-            }
-            out.write(png.data(), png.size())
-        }
+   
+        val out2 = SkFILEWStream(path.cstr)
+        out2.write(png.data(), png.size())
 }
 
 
