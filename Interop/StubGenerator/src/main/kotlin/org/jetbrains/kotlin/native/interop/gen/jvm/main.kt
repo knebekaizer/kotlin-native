@@ -331,6 +331,11 @@ private fun processCLib(flavor: KotlinPlatform, cinteropArguments: CInteropArgum
     }
     stubIrContext.addManifestProperties(def.manifestAddendProperties)
 
+    // TODO: this is for C++ compiler to be able to use -I
+    def.manifestAddendProperties["externalCompilerOpts"] =
+        (cinteropArguments.compilerOpts + cinteropArguments.compilerOptions + cinteropArguments.compilerOption)
+            .joinToString(" ")
+
     // cinterop command line option overrides def file property
     val foreignExceptionMode = cinteropArguments.foreignExceptionMode?: def.config.foreignExceptionMode
     foreignExceptionMode?.let {

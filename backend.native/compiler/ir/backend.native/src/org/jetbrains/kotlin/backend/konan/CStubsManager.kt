@@ -77,7 +77,9 @@ internal class CStubsManager(val context: Context, private val target: KonanTarg
             val clangCommand = clang.clangC(
                 *compilerOptions.toTypedArray(), "-O2",
                 cSourcePath, "-emit-llvm", "-c", "-o", bitcode.absolutePath
-            ) + (klib?.manifestProperties?.getProperty("compilerOpts")?.split(" ") ?: emptyList()) // TODO: This is got get "-I"s
+            ) +
+                (klib?.manifestProperties?.getProperty("compilerOpts")?.split(" ") ?: emptyList()) + // TODO: This is to get "-I"s etc
+                (klib?.manifestProperties?.getProperty("externalCompilerOpts")?.split(" ") ?: emptyList())
             println("BRIDGE COMPILE: ${clangCommand.joinToString(" ")}")
 
             val result = Command(clangCommand).getResult(withErrors = true)
