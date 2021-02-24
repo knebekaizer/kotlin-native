@@ -1045,7 +1045,7 @@ internal class NativeIndexImpl(val library: NativeLibrary, val verbose: Boolean 
 
     // TODO: This should be managed by Skia plugin.
     private val wellKnownSkiaStructs: List<String>
-            = listOf("SkImage", "SkSurface", "SkData")
+            = listOf("SkImage", "SkSurface", "SkData", "GrDirectContext", "SkColorSpace", "SkPicture")
 
     // TODO: This should be managed by Skia plugin.
     private fun String.isUnknownTemplate() =
