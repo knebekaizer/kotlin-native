@@ -553,6 +553,12 @@ internal abstract class FunctionalStubBuilder(
                 representAsValuesRef != null -> {
                     FunctionParameterStub(parameterName, representAsValuesRef.toStubIrType())
                 }
+                parameter.type.isKnownSkiaTemplateType() -> {
+                    val type = context.mirror(
+                        ManagedType(parameter.type.typeForKnownSkiaTemplateType())
+                    ).argType.toStubIrType()
+                    FunctionParameterStub(parameterName, type, annotations = listOf(AnnotationStub.CCall.SkiaSharedPointerParameter))
+                }
                 else -> {
                     val mirror = context.mirror(parameter.type)
                     val type = mirror.argType.toStubIrType()
@@ -565,7 +571,7 @@ internal abstract class FunctionalStubBuilder(
 
     // TODO: generalize and move out to a plugin.
     fun Type.isKnownSkiaTemplateType() = this is RecordType && this.decl.isSkiaSharedPointer
-    fun Type.retTypeForKnownSkiaTemplateType(): StructDecl {
+    fun Type.typeForKnownSkiaTemplateType(): StructDecl {
         assert(this.isKnownSkiaTemplateType()) {
             "Expected a known template type"
         }
@@ -653,8 +659,8 @@ internal class FunctionStubBuilder(
         val returnType = when {
             func.returnsVoid() -> KotlinTypes.unit
             func.returnType.isKnownSkiaTemplateType() -> {
-                println("SUBSTITUTING to ${context.mirror(ManagedType(func.returnType.retTypeForKnownSkiaTemplateType())).argType}")
-                context.mirror(ManagedType(func.returnType.retTypeForKnownSkiaTemplateType())).argType
+                println("SUBSTITUTING to ${context.mirror(ManagedType(func.returnType.typeForKnownSkiaTemplateType())).argType}")
+                context.mirror(ManagedType(func.returnType.typeForKnownSkiaTemplateType())).argType
             }
             else -> context.mirror(func.returnType).argType
         }.toStubIrType()

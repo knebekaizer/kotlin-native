@@ -468,7 +468,8 @@ private fun CCallbackBuilder.addParameter(it: IrValueParameter, functionParamete
             it.type,
             retained = it.isObjCConsumed(),
             variadic = false,
-            location = location
+            location = location,
+            skiaSharedPointer = it.hasCCallAnnotation("SkiaSharedPointerParameter")
     )
 
     val kotlinArgument = with(valuePassing) { receiveValue() }
@@ -662,7 +663,8 @@ private fun KotlinToCCallBuilder.mapCalleeFunctionParameter(
                 type,
                 retained = parameter?.isObjCConsumed() ?: false,
                 variadic = variadic,
-                location = argument
+                location = argument,
+                skiaSharedPointer = parameter?.hasCCallAnnotation("SkiaSharedPointerParameter") ?: false
         )
     }
 }
@@ -740,19 +742,7 @@ private fun KotlinStubs.mapType(
     type.isLong() -> TrivialValuePassing(irBuiltIns.longType, CTypes.longLong)
     type.isFloat() -> TrivialValuePassing(irBuiltIns.floatType, CTypes.float)
     type.isDouble() -> TrivialValuePassing(irBuiltIns.doubleType, CTypes.double)
-    type.isCPointer(symbols) -> /*if (skiaSharedPointer) {
-        // TODO: what to do with nulls?
-        //require(!type.isNullable()) { renderCompilerError(location) }
-        val kotlinClass = (type as IrSimpleType).arguments.singleOrNull()?.typeOrNull?.getClass()
-        require(kotlinClass != null) { renderCompilerError(location) }
-        val cStructType = getNamedCSkiaSharedPointerToStructType(kotlinClass)
-        require(cStructType != null) { renderCompilerError(location) }
-
-        SkiaSharedPointerPassing(type, kotlinClass, cStructType)
-    } else {
-    */
-        TrivialValuePassing(type, CTypes.voidPtr)
-    //}
+    type.isCPointer(symbols) -> TrivialValuePassing(type, CTypes.voidPtr)
     type.isTypeOfNullLiteral() && variadic  -> TrivialValuePassing(symbols.interopCPointer.typeWithStarProjections.makeNullable(), CTypes.voidPtr)
     type.isUByte() -> UnsignedValuePassing(type, CTypes.signedChar, CTypes.unsignedChar)
     type.isUShort() -> UnsignedValuePassing(type, CTypes.short, CTypes.unsignedShort)
@@ -949,19 +939,6 @@ private class StructValuePassing(private val kotlinClass: IrClass, override val 
         bridgeCallBuilder.prepare += kotlinPointed
 
         val cPointer = passThroughBridge(irGet(kotlinPointed), kotlinPointedType, CTypes.pointer(cType))
-        // TODO: need to implement C++ return by value.
-        // It's not that easy as there's that typedef:
-        //
-        // typedef struct { int p0; struct { } p1; } _70726f6772616d_struct10;
-        // extern const _70726f6772616d_struct10 (*_70726f6772616d_target9)(void *) __asm("knifunptr_cppClass9_retByValue");
-        // void _70726f6772616d_knbridge8(void *p1, _70726f6772616d_struct10 *p2) {
-        //      *p2 = _70726f6772616d_target9(p1);
-        // }
-        // So implementing something like
-        //      new(p1) CppTest(retByValue((CppTest *)p0));
-        // needs some additional work, since this is not the original class.
-
-        //cBridgeBodyLines += "*${cPointer.name} = $expression;"
 
         cBridgeBodyLines +="new(${cPointer.name}) ${cType.render("")}($expression);"
 
@@ -1029,13 +1006,19 @@ private class SkiaSharedPointerPassing(
         get() = CTypes.voidPtr
 
     override fun KotlinToCCallBuilder.passValue(expression: IrExpression): CExpression {
-        val cBridgeValue = passThroughBridge(
-            cValuesRefToPointer(expression),
-            symbols.interopCPointer.typeWithStarProjections,
-            CTypes.pointer(cType)
-        ).name
-
-        return CExpression(cBridgeValue, cType)
+        val structClass = expression.type.classOrNull!!.owner
+        val rawPtrGetter =
+            structClass.declarations
+            .filterIsInstance<IrProperty>()
+            .single { it.name.toString() == "rawPtr" }
+            .getter!!
+        val bridgeArgument = irBuilder.irCall(rawPtrGetter).apply {
+            dispatchReceiver = expression
+        }
+        val cBridgeValue = passThroughBridge(bridgeArgument, kotlinBridgeType, cBridgeType).name
+        println("SKIA PASS: ${expression.render()}")
+        val structName = structClass.name.toString()
+        return CExpression("sk_ref_sp<$structName>(reinterpret_cast<$structName*>(${cBridgeValue}))", cType)
     }
 
     override fun KotlinToCCallBuilder.returnValue(expression: String): IrExpression = with(irBuilder) {
@@ -1072,47 +1055,6 @@ private class SkiaSharedPointerPassing(
             )
         }
     }
-
-/*
-    override fun CCallbackBuilder.receiveValue(): IrExpression = with(bridgeBuilder.kotlinIrBuilder) {
-        val cParameter = cFunctionBuilder.addParameter(cType)
-        val kotlinPointed = passThroughBridge("&${cParameter.name}", CTypes.voidPtr, kotlinPointedType)
-
-        readCValue(irGet(kotlinPointed), symbols)
-    }
-
-    private fun IrBuilderWithScope.readCValue(kotlinPointed: IrExpression, symbols: KonanSymbols): IrExpression =
-        irCall(symbols.interopCValueRead.owner).apply {
-            extensionReceiver = kotlinPointed
-            putValueArgument(0, getTypeObject())
-        }
-
-    override fun CCallbackBuilder.returnValue(expression: IrExpression) = with(bridgeBuilder.kotlinIrBuilder) {
-        bridgeBuilder.setReturnType(irBuiltIns.unitType, CTypes.void)
-        cFunctionBuilder.setReturnType(cType)
-
-        val result = "callbackResult"
-        val cReturnValue = CVariable(cType, result)
-        cBodyLines += "$cReturnValue;"
-        val kotlinPtr = passThroughBridge("&$result", CTypes.voidPtr, symbols.nativePtrType)
-
-        kotlinBridgeStatements += irCall(symbols.interopCValueWrite.owner).apply {
-            extensionReceiver = expression
-            putValueArgument(0, irGet(kotlinPtr))
-        }
-        val cBridgeCall = buildCBridgeCall()
-        cBodyLines += "$cBridgeCall;"
-        cBodyLines += "return $result;"
-    }
-
-    private val kotlinPointedType: IrType get() = kotlinClass.defaultType
-
-    private fun IrBuilderWithScope.getTypeObject() =
-        irGetObject(
-            kotlinClass.declarations.filterIsInstance<IrClass>()
-                .single { it.isCompanion }.symbol
-        )
-*/
 }
 
 
