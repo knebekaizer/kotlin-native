@@ -553,11 +553,18 @@ internal abstract class FunctionalStubBuilder(
                 representAsValuesRef != null -> {
                     FunctionParameterStub(parameterName, representAsValuesRef.toStubIrType())
                 }
-                parameter.type.isKnownSkiaTemplateType() -> {
+                // TODO: this should be not just for any C++, but Skia plugin specifically.
+                parameter.type.isKnownSkiaTemplateType() && context.configuration.library.language == Language.CPP -> {
                     val type = context.mirror(
                         ManagedType(parameter.type.typeForKnownSkiaTemplateType())
                     ).argType.toStubIrType()
                     FunctionParameterStub(parameterName, type, annotations = listOf(AnnotationStub.CCall.SkiaSharedPointerParameter))
+                }
+                // TODO: this should be not just for any C++, but Skia plugin specifically.
+                parameter.type is RecordType && context.configuration.library.language == Language.CPP -> {
+                    val mirror = context.mirror(parameter.type)
+                    val type = mirror.argType.toStubIrType()
+                    FunctionParameterStub(parameterName, type, annotations = listOf(AnnotationStub.CCall.SkiaStructValueParameter))
                 }
                 else -> {
                     val mirror = context.mirror(parameter.type)
@@ -581,9 +588,21 @@ internal abstract class FunctionalStubBuilder(
     }
 
     protected fun buildFunctionAnnotations(func: FunctionDecl, stubName: String = func.name) = listOf(
-            // TODO: this should ne managed by Skia plugin
+            // TODO: this should be managed by Skia plugin, not just C++ mode.
             AnnotationStub.CCall.SkiaSharedPointerReturn.takeIf {
-                func.returnType.let { it is RecordType && it.decl.isSkiaSharedPointer}
+                func.returnType.let {
+                    it is RecordType &&
+                    it.decl.isSkiaSharedPointer &&
+                    context.configuration.library.language == Language.CPP
+                }
+            },
+            // TODO: this should be managed by Skia plugin, not just C++ mode.
+            AnnotationStub.CCall.SkiaStructValueReturn.takeIf {
+                func.returnType.let {
+                    it is RecordType &&
+                    !it.decl.isSkiaSharedPointer &&
+                    context.configuration.library.language == Language.CPP
+                }
             },
             AnnotationStub.CCall.Symbol("${context.generateNextUniqueId("knifunptr_")}_${stubName}")
         ).filterNotNull()

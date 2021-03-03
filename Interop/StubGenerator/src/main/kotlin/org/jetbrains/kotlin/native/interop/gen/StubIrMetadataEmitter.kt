@@ -424,6 +424,8 @@ private class MappingExtensions(
             )
             is AnnotationStub.CCall.SkiaSharedPointerReturn -> emptyMap()
             is AnnotationStub.CCall.SkiaSharedPointerParameter -> emptyMap()
+            is AnnotationStub.CCall.SkiaStructValueReturn -> emptyMap()
+            is AnnotationStub.CCall.SkiaStructValueParameter -> emptyMap()
             is AnnotationStub.CCall.SkiaClassConstructor -> emptyMap()
             is AnnotationStub.CStruct -> mapOfNotNull(
                     ("spelling" to struct).asAnnotationArgument()

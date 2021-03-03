@@ -489,6 +489,10 @@ class StubIrTextEmitter(
             "@CCall.SkiaSharedPointerReturn"
         AnnotationStub.CCall.SkiaSharedPointerParameter ->
             "@CCall.SkiaSharedPointerParameter"
+        AnnotationStub.CCall.SkiaStructValueReturn ->
+            "@CCall.SkiaStructValueReturn"
+        AnnotationStub.CCall.SkiaStructValueParameter ->
+            "@CCall.SkiaStructValueParameter"
         AnnotationStub.CCall.SkiaClassConstructor ->
             "@CCall.SkiaClassConstructor"
         is AnnotationStub.CStruct ->
